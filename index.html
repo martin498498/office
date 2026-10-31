@@ -200,6 +200,9 @@ nav a.syncstat{display:block;margin:0 16px 8px;font-size:12px;color:#cfe0ff;padd
 nav a.syncstat.bad{color:#ffb4b4}
 #topbar a.syncstat{font-size:12px;padding:4px 6px;white-space:nowrap}
 #topbar a.syncstat.bad{color:#ffb4b4}
+
+nav .whoami{margin:0 16px 6px;font-size:12px;color:#cfe0ff}
+.doc .nopr{text-align:center;color:#b00;font-weight:bold;border:1px dashed #b00;padding:3px;margin:-4px 0 8px;font-size:11px}
 </style>
 </head>
 <body>
@@ -344,18 +347,19 @@ const NAV=[['home','🏠 首頁'],['grp','主流程'],['STY','① 開發款式']
  ['grp','追蹤'],['tsample','樣板追蹤'],['tprod','生產追蹤'],['tpay','收款'],
  ['grp','可選'],['PI','PI / SC'],
  ['grp','資料'],['customers','客戶'],['factories','工廠'],['company','公司資料'],['settings','追蹤階段設定'],
- ['grp','系統'],['cloud','☁ Nextcloud 同步'],['backup','備份 / 還原'],['security','🔒 安全設定'],['help','使用說明']];
+ ['grp','系統'],['cloud','☁ Nextcloud 同步'],['backup','備份 / 還原'],['users','👥 用戶管理'],['security','🔒 安全設定'],['help','使用說明']];
 let view='home',editing=null,D=null;
+const OWNER_ONLY=['tpay','users'];const navOK=k=>CANP()||!OWNER_ONLY.includes(k);
 function go(v,id){location.hash=v+(id?'-'+id:'')}
 window.addEventListener('hashchange',route);
 function route(){if(!S)return;const h=decodeURIComponent(location.hash.slice(1));const i=h.indexOf('-');const v=i<0?h:h.slice(0,i),id=i<0?null:h.slice(i+1);
- view=NAV.some(n=>n[0]===v)?v:'home';editing=id;closePreview(true);render();window.scrollTo(0,0)}
+ view=NAV.some(n=>n[0]===v)&&navOK(v)?v:'home';editing=id;closePreview(true);render();window.scrollTo(0,0)}
 function render(){CALC={};D=null;document.body.classList.remove('navopen');const tb=document.getElementById('tbTitle');if(tb)tb.textContent=(NAV.find(n=>n[0]===view)||[0,'首頁'])[1].replace(/^[^\w\u4e00-\u9fff①-⑦]+/,'');
- document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a><a class="syncstat" href="#cloud"></a>'+NAV.map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
+ document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><div class="whoami">'+esc(ME?.name||'')+(CANP()?'（負責人）':'（同事）')+'</div><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a><a class="syncstat" href="#cloud"></a>'+NAV.filter(([k])=>k==='grp'||navOK(k)).map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
  const m=document.getElementById('main');let h;
  if(view==='STY')h=editing?styleEditor():styleList();
  else if(T[view])h=editing?docEditor():docList(view);
- else h=({home:homeView,tsample:sampleTrack,tprod:prodTrack,tpay:payTrack,customers:()=>masterView('customers'),factories:()=>masterView('factories'),company:companyView,settings:settingsView,backup:backupView,cloud:ncView,security:securityView,help:helpView}[view]||homeView)();
+ else h=({home:homeView,tsample:sampleTrack,tprod:prodTrack,tpay:payTrack,customers:()=>masterView('customers'),factories:()=>masterView('factories'),company:companyView,settings:settingsView,backup:backupView,cloud:ncView,users:usersView,security:securityView,help:helpView}[view]||homeView)();
  m.innerHTML=h;if(typeof paintSync==='function')paintSync()}
 
 /* =================== ① 開發款式 =================== */
@@ -378,8 +382,8 @@ function styleEditor(){const s=S.styles.find(x=>x.id===editing);if(!s)return sty
  ${F('鞋面 Upper',inp(P+'.upper'))}${F('內裡 Lining',inp(P+'.lining'))}${F('鞋底 Sole',inp(P+'.sole'))}${F('HS Code',inp(P+'.hs'))}
  </div></div>
  ${sizePicker(s)}
- <div class="card"><h3>價錢</h3><div class="form">${F('工廠',sel(P+'.factory',facOpts()))}${F('工廠價（成本）',inp(P+'.factoryPrice',{n:1}))}${F('報價 / 售價',inp(P+'.sellPrice',{n:1}))}${F('樣板費',inp(P+'.sampleCost'))}</div>
- <p class="muted">毛利率：${calc('sm',()=>{const a=num(s.sellPrice),b=num(s.factoryPrice);return a&&b?pct(a-b,a):'—'})}</p></div>
+ ${CANP()?`<div class="card"><h3>價錢</h3><div class="form">${F('工廠',sel(P+'.factory',facOpts()))}${F('工廠價（成本）',inp(P+'.factoryPrice',{n:1}))}${F('報價 / 售價',inp(P+'.sellPrice',{n:1}))}${F('樣板費',inp(P+'.sampleCost'))}</div>
+ <p class="muted">毛利率：${calc('sm',()=>{const a=num(s.sellPrice),b=num(s.factoryPrice);return a&&b?pct(a-b,a):'—'})}</p></div>`:`<div class="card"><h3>工廠</h3><div class="form">${F('工廠',sel(P+'.factory',facOpts()))}</div><p class="muted">🔒 價錢由負責人處理</p></div>`}
  <div class="card"><h3>包裝資料（Packing List 用）</h3><div class="form">${F('每箱雙數',inp(P+'.prsCtn',{n:1}))}${F('每箱淨重 kg',inp(P+'.nw',{n:1}))}${F('每箱毛重 kg',inp(P+'.gw',{n:1}))}${F('外箱長 cm',inp(P+'.L',{n:1}))}${F('外箱闊 cm',inp(P+'.W',{n:1}))}${F('外箱高 cm',inp(P+'.H',{n:1}))}<div><label>每箱 CBM</label><div style="padding:6px 0">${calc('cbm',()=>cbmOf(s)||'—')}</div></div></div>
  <div class="form" style="margin-top:10px">${F('備註',ta(P+'.note'),'wide')}</div></div>
  ${rel?`<div class="card"><h3>相關單據</h3>${rel}</div>`:''}`}
@@ -405,11 +409,11 @@ function delStyle(id){const s=S.styles.find(x=>x.id===id);ask(`確定刪除款�
 function docSummary(d){
  if(d.type==='SD')return [esc(d.devNo),esc(findFac(d.fac).name||''),esc(d.stype),stageBar(d.stages),badge(d.status)];
  if(d.type==='QT')return [esc(findCust(d.cust).name||''),d.lines.map(l=>esc(l.devNo)).join(', '),badge(d.status)];
- if(d.type==='CO'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),`<b>${esc(d.custPO)}</b>`,f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt),esc(d.etd),badge(d.status)]}
+ if(d.type==='CO'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),`<b>${esc(d.custPO)}</b>`,f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒',esc(d.etd),badge(d.status)]}
  if(d.type==='PO'){const t=poTotals(d);return [esc(d.devNo),esc(findFac(d.fac).name||''),esc(d.custPO),f0(t.qty)+' 雙',esc(d.delivery),stageBar(d.stages)]}
  if(d.type==='PL'){const t=plTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),t.ctn+' 箱',f0(t.prs)+' 雙']}
- if(d.type==='INV'){const t=invTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt)]}
- if(d.type==='PI'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt)]}}
+ if(d.type==='INV'){const t=invTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒']}
+ if(d.type==='PI'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒']}}
 const HEADS={SD:['款號','工廠','類型','進度','狀態'],QT:['客戶','款號','狀態'],CO:['客戶','客人PO號','雙數','金額','ETD','狀態'],PO:['款號','工廠','客人PO號','雙數','交貨期','生產進度'],PL:['客戶','客人PO號','箱數','雙數'],INV:['客戶','客人PO號','雙數','金額'],PI:['客戶','客人PO號','雙數','金額']};
 const INTRO={SD:'揀開發款式開樣板單俾工廠，圖片同資料會自動帶入。每張樣板單都有自己嘅進度追蹤。',QT:'樣板完成之後，開報價單俾客人。可以喺開發款式或者樣板單入面一㩒開。',CO:'客人確認報價之後會落 PO 俾你，喺呢度輸入每個顏色、每個碼嘅數量。之後一㩒就可以生成採購單（每款一張）。',PO:'採購單由客人訂單生成，每款一張，用工廠價。每張都有生產進度追蹤。',PL:'生產完成後，由客人訂單開 Packing List。',INV:'由 Packing List 一㩒開 Invoice，向客人收款。',PI:'（可選）有啲客人要 PI 先肯落訂金，可以由客人訂單開。'};
 function docList(type){const docs=docsOf(type).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
@@ -474,39 +478,39 @@ const addStyleSel=(P,label='＋ 加款式')=>`<select style="width:auto;backgrou
 function docEditor(){D=docById(editing);if(!D)return docList(view);const P=`docs.${S.docs.indexOf(D)}`;return ({SD:sdEditor,QT:qtEditor,CO:coEditor,PO:poEditor,PL:plEditor,INV:invEditor,PI:piEditor})[D.type](P)}
 function custFields(P){const c=findCust(D.cust);return F('客戶',sel(P+'.cust',custOpts(),{r:1}))+RO('聯絡人 / 付款條款',(c.attn||'')+(c.payment?' / '+c.payment:''))}
 function sdEditor(P){const s=findStyle(D.devNo);
- return topBar(`<button onclick="replyToStyle('${D.id}')">工廠價記入款式</button><button onclick="qtFromSD('${D.id}')">③ 開報價單俾客人</button>`)+
+ return topBar(`${CANP()?`<button onclick="replyToStyle('${D.id}')">工廠價記入款式</button>`:''}<button onclick="qtFromSD('${D.id}')">③ 開報價單俾客人</button>`)+
  `<div class="card"><div class="form">${F('樣板單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('開發款號 *',sel(P+'.devNo',styleOpts(),{r:1}))}${F('工廠',sel(P+'.fac',facOpts()))}${F('客戶',sel(P+'.cust',custOpts()))}
  ${F('樣板類型',sel(P+'.stype',SAMPLE_TYPES))}${F('數量',inp(P+'.qty'))}${F('樣板碼數',inp(P+'.sampleSize',{ph:'例如 EU 30 左右腳'}))}${F('顏色',inp(P+'.colors'))}${F('要求交樣日',inp(P+'.due',{type:'date'}))}
  ${F('狀態',sel(P+'.status',SAMPLE_STATUS))}${F('速遞單號',inp(P+'.courier'))}${F('客人意見',inp(P+'.feedback'),'wide')}</div></div>
  <div class="card"><h3>圖片</h3>${s.images?.length?`<p class="muted">由開發款式 ${esc(s.devNo)} 帶入：</p><div class="imgbox">${s.images.map(x=>`<div class="im"><img src="${x}"></div>`).join('')}</div>`:''}<p class="muted">另加圖片（只限呢張樣板單）：</p>${imgBox(P+'.images')}</div>
  <div class="card"><h3>物料規格</h3><table class="grid" style="width:100%"><tr><th>部位</th><th>物料 Material</th><th>顏色 Color</th><th>備註</th></tr>${D.parts.map((p,k)=>`<tr><td>${inp(`${P}.parts.${k}.part`,{st:'background:#fff;color:#000;font-weight:bold'})}</td><td>${inp(`${P}.parts.${k}.mat`)}</td><td>${inp(`${P}.parts.${k}.color`)}</td><td>${inp(`${P}.parts.${k}.rem`)}</td></tr>`).join('')}</table>
  <div class="form" style="margin-top:10px">${F('特別要求',ta(P+'.special'),'wide')}</div></div>
- <div class="card"><h3>工廠回覆</h3><div class="form">${[['樣板費','cost'],['大貨價（工廠價）','bulk'],['開模費','mould'],['生產期','lead'],['MOQ','moq'],['實際交樣日','delivered']].map(([l,k])=>F(l,inp(`${P}.reply.${k}`,{type:k==='delivered'?'date':''}))).join('')}</div><p class="muted">填好大貨價之後，㩒上面「工廠價記入款式」，報價單就會用呢個價計毛利。</p></div>
+ <div class="card"><h3>工廠回覆</h3><div class="form">${[...(CANP()?[['樣板費','cost'],['大貨價（工廠價）','bulk'],['開模費','mould']]:[]),['生產期','lead'],['MOQ','moq'],['實際交樣日','delivered']].map(([l,k])=>F(l,inp(`${P}.reply.${k}`,{type:k==='delivered'?'date':''}))).join('')}</div><p class="muted">${CANP()?'填好大貨價之後，㩒上面「工廠價記入款式」，報價單就會用呢個價計毛利。':'🔒 樣板費、大貨價、開模費由負責人填寫。'}</p></div>
  ${stagesCard(P+'.stages','樣板追蹤')}`}
 function qtEditor(P){return topBar(`<button onclick="coFromQT('${D.id}')">✓ 客人確認 → ④ 輸入客人 PO</button>`)+
  `<div class="card"><div class="form">${F('報價單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('有效期至',inp(P+'.valid',{type:'date'}))}${RO('貨幣 / 價格條款',curOf(D)+' / '+priceTerm(D))}${F('狀態',sel(P+'.status',['等客人回覆','客人已確認','需重新報價','冇落單']))}
  ${F('交貨期 Lead Time',inp(P+'.leadTime'),'wide')}${F('包裝 Packing',inp(P+'.packing'),'wide')}${F('樣板 Sample',inp(P+'.sample'),'wide')}${F('備註 Remarks',inp(P+'.remarks'),'wide')}</div></div>
- <div class="card"><h3>報價款式</h3><div class="scroll"><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>碼段</th><th>顏色</th><th>MOQ (雙)</th><th>報價</th><th>工廠價</th><th>毛利率</th><th>備註</th><th></th></tr>
- ${D.lines.map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td>${thumb(imgOf(l.devNo),40)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(s.name||'')}</td><td class="c">${esc(s.sizeRange||'')}</td><td>${inp(`${P}.lines.${i}.colors`,{w:150})}</td><td>${inp(`${P}.lines.${i}.moq`,{n:1,w:70})}</td><td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${s.factoryPrice!==''&&s.factoryPrice!=null?f2(s.factoryPrice):'—'}</td><td class="c">${calc('m'+i,()=>{const l2=D.lines[i];const a=num(l2?.price),b=num(findStyle(l2?.devNo).factoryPrice);return a&&b?pct(a-b,a):'—'})}</td><td>${inp(`${P}.lines.${i}.rem`,{w:160})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`}).join('')}</table></div>
- <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){const s=findStyle(this.value);D.lines.push({devNo:s.devNo,colors:s.colors,moq:'',price:s.sellPrice??'',rem:''});save();render()}">${styleOpts('＋ 加款式').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select><span class="muted">工廠價同毛利率只會喺呢度顯示，唔會印出嚟。</span></div></div>`}
+ <div class="card"><h3>報價款式</h3><div class="scroll"><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>碼段</th><th>顏色</th><th>MOQ (雙)</th>${CANP()?'<th>報價</th><th>工廠價</th><th>毛利率</th>':''}<th>備註</th><th></th></tr>
+ ${D.lines.map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td>${thumb(imgOf(l.devNo),40)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(s.name||'')}</td><td class="c">${esc(s.sizeRange||'')}</td><td>${inp(`${P}.lines.${i}.colors`,{w:150})}</td><td>${inp(`${P}.lines.${i}.moq`,{n:1,w:70})}</td>${CANP()?`<td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${s.factoryPrice!==''&&s.factoryPrice!=null?f2(s.factoryPrice):'—'}</td><td class="c">${calc('m'+i,()=>{const l2=D.lines[i];const a=num(l2?.price),b=num(findStyle(l2?.devNo).factoryPrice);return a&&b?pct(a-b,a):'—'})}</td>`:''}<td>${inp(`${P}.lines.${i}.rem`,{w:160})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`}).join('')}</table></div>
+ <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){const s=findStyle(this.value);D.lines.push({devNo:s.devNo,colors:s.colors,moq:'',...(CANP()?{price:s.sellPrice??''}:{}),rem:''});save();render()}">${styleOpts('＋ 加款式').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select><span class="muted">${CANP()?'工廠價同毛利率只會喺呢度顯示，唔會印出嚟。':'🔒 報價由負責人填寫。'}</span></div></div>`}
 function coEditor(P){const t=coTotals(D);const pos=docsOf('PO',p=>p.coId===D.id),pls=docsOf('PL',p=>p.coId===D.id),invs=docsOf('INV',p=>p.coId===D.id),pis=docsOf('PI',p=>p.coId===D.id);const qt=docById(D.qtId);
  const packed=packedBy(D.id);
  return topBar(`<button onclick="genPOs('${D.id}')">⑤ 生成採購單（每款一張）</button><button onclick="plFromCO('${D.id}')">⑥ 開 Packing List</button><button onclick="piFromCO('${D.id}')">開 PI（可選）</button>`)+
  `<div class="card"><div class="form">${F('客人 PO 號 *',inp(P+'.custPO',{ph:'客人張 PO 嘅號碼'}))}${F('收單日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('交貨期 ETD',inp(P+'.etd',{type:'date'}))}${F('付款條款',inp(P+'.payment'),'w2')}${F('狀態',sel(P+'.status',['進行中','已出貨','已完成','已取消']))}${F('內部訂單號',inp(P+'.no'))}${qt?RO('來自報價單',qt.no):''}${F('備註',inp(P+'.note'),'wide')}</div></div>
- <div class="card"><h3>訂單明細（顏色 × 碼數）</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:'line',priceLabel:'客人價'})}
+ <div class="card"><h3>訂單明細（顏色 × 碼數）</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:CANP()?'line':'none',priceLabel:'客人價'})}
  <div class="bar" style="margin:8px 0 0">${addStyleSel(P+'.lines')}</div>
- <div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b>　毛利 <b>${calc('cg',()=>{const x=coTotals(D);return f2(x.amt-x.cost)+' ('+(pct(x.amt-x.cost,x.amt)||'—')+')'})}</b></div></div>
+ <div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>${CANP()?`　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b>　毛利 <b>${calc('cg',()=>{const x=coTotals(D);return f2(x.amt-x.cost)+' ('+(pct(x.amt-x.cost,x.amt)||'—')+')'})}</b>`:'　<span class="muted">🔒 價錢由負責人填寫</span>'}</div></div>
  <div class="card"><h3>進度總覽</h3><table class="list"><tr><th>款號</th><th>顏色</th><th>訂單雙數</th><th>採購單</th><th>生產進度</th><th>已裝箱</th></tr>
  ${D.lines.filter(l=>l.devNo).map(l=>{const po=pos.find(p=>p.devNo===l.devNo);const pk=packed[l.devNo+'|'+l.color]||0;const q=qtyTot(l.qty);return `<tr><td>${esc(l.devNo)}</td><td>${esc(l.color)}</td><td>${f0(q)}</td><td>${po?link(po):'<span class="muted">未開</span>'}</td><td>${po?stageBar(po.stages):''}</td><td class="${pk&&pk!==q?'warn':''}">${f0(pk)}${pk===q&&q?' ✓':''}</td></tr>`}).join('')}</table>
  <div style="margin-top:8px">${pls.length?'<b>Packing List：</b>'+pls.map(x=>link(x)).join('、')+'　':''}${invs.length?'<b>Invoice：</b>'+invs.map(x=>link(x)).join('、')+'　':''}${pis.length?'<b>PI：</b>'+pis.map(x=>link(x)).join('、'):''}</div></div>
- <div class="card"><h3>收款記錄（可選）</h3><table class="grid"><tr><th>日期</th><th>類型</th><th>金額</th><th>備註</th><th></th></tr>${(D.payments||[]).map((p,k)=>`<tr><td>${inp(`${P}.payments.${k}.date`,{type:'date'})}</td><td>${sel(`${P}.payments.${k}.type`,PAY_TYPES)}</td><td>${inp(`${P}.payments.${k}.amount`,{n:1,w:110})}</td><td>${inp(`${P}.payments.${k}.note`,{w:220})}</td><td><button class="sm del" onclick="D.payments.splice(${k},1);save();render()">✕</button></td></tr>`).join('')}</table>
- <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="(D.payments=D.payments||[]).push({date:today(),type:D.payments.length?'尾數':'訂金',amount:'',note:''});save();render()">＋ 記錄收款</button><span>訂單金額 ${f2(t.amt)} · 已收 <b>${calc('pd',()=>f2(paid(D)))}</b> · 未收 <b class="warn">${calc('pu',()=>f2(coTotals(D).amt-paid(D)))}</b></span></div></div>`}
+ ${CANP()?`<div class="card"><h3>收款記錄（可選）</h3><table class="grid"><tr><th>日期</th><th>類型</th><th>金額</th><th>備註</th><th></th></tr>${(D.payments||[]).map((p,k)=>`<tr><td>${inp(`${P}.payments.${k}.date`,{type:'date'})}</td><td>${sel(`${P}.payments.${k}.type`,PAY_TYPES)}</td><td>${inp(`${P}.payments.${k}.amount`,{n:1,w:110})}</td><td>${inp(`${P}.payments.${k}.note`,{w:220})}</td><td><button class="sm del" onclick="D.payments.splice(${k},1);save();render()">✕</button></td></tr>`).join('')}</table>
+ <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="(D.payments=D.payments||[]).push({date:today(),type:D.payments.length?'尾數':'訂金',amount:'',note:''});save();render()">＋ 記錄收款</button><span>訂單金額 ${f2(t.amt)} · 已收 <b>${calc('pd',()=>f2(paid(D)))}</b> · 未收 <b class="warn">${calc('pu',()=>f2(coTotals(D).amt-paid(D)))}</b></span></div></div>`:''}`}
 function poEditor(P){const s=findStyle(D.devNo);const co=docById(D.coId);const fa=findFac(D.fac);
  return topBar(co?`<button onclick="plFromCO('${co.id}','${esc(D.devNo)}')">⑥ 開 Packing List（呢款）</button>`:'')+
- `<div class="card"><div class="form">${F('採購單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('工廠',sel(P+'.fac',facOpts(),{r:1}))}${RO('工廠付款條款',fa.payment||'')}${F('客人 PO 號',inp(P+'.custPO'))}${co?`<div><label>來自客人訂單</label><div style="padding:6px 0">${link(co,co.custPO||co.no)}</div></div>`:''}${F('交貨期',inp(P+'.delivery',{type:'date'}))}${F('工廠單價',inp(P+'.cost',{n:1}))}</div></div>
+ `<div class="card"><div class="form">${F('採購單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('工廠',sel(P+'.fac',facOpts(),{r:1}))}${RO('工廠付款條款',fa.payment||'')}${F('客人 PO 號',inp(P+'.custPO'))}${co?`<div><label>來自客人訂單</label><div style="padding:6px 0">${link(co,co.custPO||co.no)}</div></div>`:''}${F('交貨期',inp(P+'.delivery',{type:'date'}))}${CANP()?F('工廠單價',inp(P+'.cost',{n:1})):RO('工廠單價','🔒 由負責人填寫')}</div></div>
  <div class="card"><div class="mhead">${thumb(imgOf(D.devNo),70)}<div><b style="font-size:16px">${esc(D.devNo)}</b> ${esc(s.name||'')}<div class="muted">${s.custStyle?'客款 '+esc(s.custStyle)+' · ':''}碼段 ${esc(s.sizeRange||'')} · 鞋面 ${esc(s.upper||'')} · 內裡 ${esc(s.lining||'')} · 鞋底 ${esc(s.sole||'')}</div></div></div>
  ${matrixEditor(P+'.lines',D.lines,{devNo:D.devNo,price:'none'})}<div class="bar" style="margin:8px 0 0"><button class="sm" onclick="D.lines.push({color:'',qty:{}});save();render()">＋ 加顏色</button></div>
- <div class="totline">總雙數 <b>${calc('pt',()=>f0(poTotals(D).qty))}</b>　總金額 <b>${calc('pa',()=>f2(poTotals(D).amt))}</b></div></div>
+ <div class="totline">總雙數 <b>${calc('pt',()=>f0(poTotals(D).qty))}</b>${CANP()?`　總金額 <b>${calc('pa',()=>f2(poTotals(D).amt))}</b>`:''}</div></div>
  <div class="card"><h3>生產要求</h3><div class="form">${[['物料 Material','mat'],['包裝 Packing','pack'],['嘜頭 Shipping Mark','mark'],['質量 Quality','qc'],['驗貨 Inspection','insp'],['備註 Remarks','rem']].map(([l,k])=>F(l,inp(`${P}.req.${k}`),'wide')).join('')}</div></div>
  ${stagesCard(P+'.stages','生產追蹤')}`}
 function plEditor(P){const co=docById(D.coId);const t=plTotals(D);
@@ -526,15 +530,15 @@ function plEditor(P){const co=docById(D.coId);const t=plTotals(D);
  ${co?`<div class="card"><h3>同客人訂單核對</h3><p class="muted">計埋呢張客人訂單所有 Packing List</p>${calc('plchk',()=>`<table class="list"><tr><th>款號</th><th>顏色</th><th>訂單雙數</th><th>已裝箱</th><th>差異</th></tr>${check()}</table>`)}</div>`:''}`}
 function addPLLine(){const last=D.lines[D.lines.length-1];const dn=last?.devNo||'';const s=findStyle(dn);D.lines.push({from:last&&last.to!==''?num(last.to)+1:1,to:'',devNo:dn,color:'',qty:{},nw:s.nw??'',gw:s.gw??'',cbm:cbmOf(s)});save();render()}
 function invEditor(P){const pl=docById(D.plId);const co=docById(D.coId);const t=invTotals(D);
- return topBar('')+`<div class="card"><div class="form">${F('Invoice No.',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('From',inp(P+'.from'))}${F('To',inp(P+'.to'))}${F('Vessel / Voy.',inp(P+'.vessel'))}${pl?`<div><label>來自 Packing List</label><div style="padding:6px 0">${link(pl)}</div></div>`:''}${F('SAY TOTAL（英文大寫金額）',inp(P+'.sayTotal'),'wide')}</div>
- ${co?`<div style="margin-top:10px">${chk(P+'.lessDeposit',`扣除已收訂金（${curOf(D)} ${f2(deposits(co))}，喺客人訂單嘅收款記錄）`)}</div>`:''}</div>
- <div class="card"><h3>貨品</h3><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>顏色</th><th>雙數</th><th>單價</th><th>金額</th><th></th></tr>
- ${D.lines.map((l,i)=>`<tr><td>${thumb(imgOf(l.devNo),34)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(findStyle(l.devNo).name||'')}</td><td>${inp(`${P}.lines.${i}.color`,{w:90})}</td><td>${inp(`${P}.lines.${i}.qty`,{n:1,w:80})}</td><td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${calc('ia'+i,()=>{const x=D.lines[i];return x?f2(num(x.qty)*num(x.price)):''})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`).join('')}
- <tr class="tot"><td colspan="4" style="text-align:right">TOTAL</td><td class="c">${calc('iq',()=>f0(invTotals(D).qty))}</td><td class="c">${curOf(D)}</td><td class="c">${calc('it',()=>f2(invTotals(D).amt))}</td><td></td></tr></table>
- <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="D.lines.push({devNo:'',color:'',qty:'',price:''});save();render()">＋ 加一行</button></div>
+ return topBar('')+`<div class="card"><div class="form">${F('Invoice No.',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('From',inp(P+'.from'))}${F('To',inp(P+'.to'))}${F('Vessel / Voy.',inp(P+'.vessel'))}${pl?`<div><label>來自 Packing List</label><div style="padding:6px 0">${link(pl)}</div></div>`:''}${CANP()?F('SAY TOTAL（英文大寫金額）',inp(P+'.sayTotal'),'wide'):''}</div>
+ ${co&&CANP()?`<div style="margin-top:10px">${chk(P+'.lessDeposit',`扣除已收訂金（${curOf(D)} ${f2(deposits(co))}，喺客人訂單嘅收款記錄）`)}</div>`:''}</div>
+ <div class="card"><h3>貨品</h3><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>顏色</th><th>雙數</th>${CANP()?'<th>單價</th><th>金額</th>':''}<th></th></tr>
+ ${D.lines.map((l,i)=>`<tr><td>${thumb(imgOf(l.devNo),34)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(findStyle(l.devNo).name||'')}</td><td>${inp(`${P}.lines.${i}.color`,{w:90})}</td><td>${inp(`${P}.lines.${i}.qty`,{n:1,w:80})}</td>${CANP()?`<td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${calc('ia'+i,()=>{const x=D.lines[i];return x?f2(num(x.qty)*num(x.price)):''})}</td>`:''}<td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`).join('')}
+ <tr class="tot"><td colspan="4" style="text-align:right">TOTAL</td><td class="c">${calc('iq',()=>f0(invTotals(D).qty))}</td>${CANP()?`<td class="c">${curOf(D)}</td><td class="c">${calc('it',()=>f2(invTotals(D).amt))}</td>`:''}<td></td></tr></table>
+ <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="D.lines.push({devNo:'',color:'',qty:''});save();render()">＋ 加一行</button></div>
  ${pl?calc('ichk',()=>{const p=plTotals(pl),q=invTotals(D).qty;return p.prs!==q?`<div class="warn">⚠ Invoice 雙數 (${f0(q)}) 同 Packing List 雙數 (${f0(p.prs)}) 唔一致</div>`:`<div style="color:var(--ok)">✓ 雙數同 Packing List 一致（${p.ctn} 箱 / ${f0(p.prs)} 雙）</div>`}):''}</div>`}
-function piEditor(P){return topBar('')+`<div class="card"><div class="form">${F('單據標題',sel(P+'.title',['PROFORMA INVOICE','SALES CONFIRMATION']))}${F('單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('交貨期 ETD',inp(P+'.etd'))}${F('包裝',inp(P+'.packing'),'wide')}${F('備註',inp(P+'.remarks'),'wide')}${F('SAY TOTAL',inp(P+'.sayTotal'),'wide')}</div></div>
- <div class="card"><h3>明細</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:'line'})}<div class="bar" style="margin:8px 0 0">${addStyleSel(P+'.lines')}</div><div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b></div></div>`}
+function piEditor(P){return topBar('')+`<div class="card"><div class="form">${F('單據標題',sel(P+'.title',['PROFORMA INVOICE','SALES CONFIRMATION']))}${F('單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('交貨期 ETD',inp(P+'.etd'))}${F('包裝',inp(P+'.packing'),'wide')}${F('備註',inp(P+'.remarks'),'wide')}${CANP()?F('SAY TOTAL',inp(P+'.sayTotal'),'wide'):''}</div></div>
+ <div class="card"><h3>明細</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:CANP()?'line':'none'})}<div class="bar" style="margin:8px 0 0">${addStyleSel(P+'.lines')}</div><div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>${CANP()?`　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b>`:''}</div></div>`}
 
 /* =================== 追蹤頁 =================== */
 function sampleTrack(){const act=sampleTrack.all?docsOf('SD'):docsOf('SD',d=>['進行中','待修改','已寄客'].includes(d.status));
@@ -558,7 +562,7 @@ function homeView(){const days=S.lastBackup?Math.floor((Date.now()-new Date(S.la
  const steps=[['STY','① 開發款式','有圖 → 開發號碼、碼段、顏色'],['SD','② 樣板單','發工廠做樣板 + 樣板追蹤'],['QT','③ 報價單','樣板完成 → 報價俾客人'],['CO','④ 客人訂單','客人確認 → 落 PO 俾你'],['PO','⑤ 採購單','每款一張俾工廠 + 生產追蹤'],['PL','⑥ Packing List','生產完成 → 裝箱明細'],['INV','⑦ Invoice','向客人收款']];
  return `<h2>首頁</h2>${days===null||days>7?`<div class="card warnbox">⚠ ${days===null?'你未下載過備份':`你已經 ${days} 日冇備份`}。資料只存喺呢個瀏覽器，請去 <a href="#backup">備份 / 還原</a> 下載備份檔。</div>`:''}
  <div class="flow">${steps.map(([k,a,b])=>`<a href="#${k}" class="fstep"><b>${a}</b><span>${b}</span></a>`).join('<span class="arr">→</span>')}</div>
- <div class="kpis"><a class="kpi" href="#tsample">進行中樣板<b>${sds.length}</b></a><a class="kpi" href="#QT">等回覆報價<b>${qts.length}</b></a><a class="kpi" href="#tprod">生產中採購單<b>${pos.length}</b></a><a class="kpi" href="#tpay">已出 Invoice 未收<b>${f2(out)}</b></a></div>
+ <div class="kpis"><a class="kpi" href="#tsample">進行中樣板<b>${sds.length}</b></a><a class="kpi" href="#QT">等回覆報價<b>${qts.length}</b></a><a class="kpi" href="#tprod">生產中採購單<b>${pos.length}</b></a>${CANP()?`<a class="kpi" href="#tpay">已出 Invoice 未收<b>${f2(out)}</b></a>`:''}</div>
  <div class="card"><h3>⚠ 延誤 / 要跟進</h3>${lateS.length||lateP.length?`<table class="list">${lateS.map(d=>`<tr class="late"><td>樣板</td><td>${link(d)}</td><td>${esc(d.devNo)}</td><td>${esc(findFac(d.fac).name||'')}</td><td>${stageBar(d.stages)}</td><td>要求交樣 ${esc(d.due)}</td></tr>`).join('')}${lateP.map(p=>`<tr class="late"><td>生產</td><td>${link(p)}</td><td>${esc(p.devNo)}</td><td>${esc(findFac(p.fac).name||'')}</td><td>${stageBar(p.stages)}</td><td>交貨期 ${esc(p.delivery)}</td></tr>`).join('')}</table>`:'<span class="muted">冇延誤 👍</span>'}</div>`}
 
 /* =================== 資料 =================== */
@@ -574,20 +578,21 @@ function settingsView(){return `<h2>追蹤階段設定</h2><p class="muted">每�
 function backupView(){return `<h2>備份 / 還原</h2><div class="card"><b>⚠ 資料只係存喺呢部電腦呢個瀏覽器入面（已加密）。</b><p>清除瀏覽器資料、換電腦或者換瀏覽器都會睇唔到。請<b>每星期最少下載一次備份</b>，放喺 Google Drive / Dropbox / USB。</p>
  <p>備份檔係<b>加密</b>嘅，冇你嘅密碼（或者恢復碼）開唔到，所以放上雲端都安全。</p>
  <p class="muted">最後儲存：${S.savedAt?new Date(S.savedAt).toLocaleString():'—'} · 款式 ${S.styles.length} · 單據 ${S.docs.length}</p>
- <div class="bar"><button class="pri" onclick="exportJSON()">⬇ 下載加密備份檔</button><label class="btn">⬆ 由備份檔還原<input type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this)"></label></div>
+ <div class="bar"><button class="pri" onclick="exportJSON()">⬇ 下載加密備份檔</button>${CANP()?'<label class="btn">⬆ 由備份檔還原<input type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this)"></label>':''}</div>
  <p class="muted">喺另一部電腦用：開返呢個網頁 → 登入畫面揀「由備份檔還原」→ 揀備份檔 → 用你嘅密碼同手機驗證碼登入。</p></div>
  <div class="card"><b>匯出 Excel (CSV)</b><p class="muted">⚠ CSV 檔冇加密，請小心保管。</p><div class="bar" style="margin-top:8px"><button onclick="exportCSV()">⬇ 訂單明細 CSV</button></div></div>
- <div class="card"><b>重設</b><p class="muted">清走所有業務資料，返回範例資料（密碼同手機驗證碼保持不變）。建議先下載備份。</p><button class="del" onclick="ask('確定清走所有資料？',()=>{S={...seed(),auth:S.auth,settings:S.settings};save();go('home')})">清走所有資料</button></div>`}
+ ${CANP()?'':'<!--'}<div class="card"><b>重設</b><p class="muted">清走所有業務資料，返回範例資料（密碼同手機驗證碼保持不變）。建議先下載備份。</p><button class="del" onclick="ask('確定清走所有資料？',()=>{S={...seed(),auth:S.auth,settings:S.settings};save();go('home')})">清走所有資料</button></div>${CANP()?'':'-->'}`}
 function download(name,text,type){const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  if(ios&&navigator.canShare){try{const f=new File([text],name,{type});if(navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(()=>{});return}}catch(e){}}
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 async function exportJSON(){S.lastBackup=today();await flush();download(`辦公室系統備份-加密-${today()}.json`,JSON.stringify(VAULT),'application/json');render()}
 function importJSON(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
- if(x.pw&&x.rc&&x.data)ask('還原會取代而家所有資料。還原之後要用<b>建立備份嗰陣嘅密碼同手機驗證碼</b>登入。確定？',async()=>{await flush();DK=null;S=null;VAULT=x;await idbPut('vault',x);loginView('已還原備份。請用備份嘅密碼同驗證碼登入。')});
+ if(!CANP())return toast('只有負責人可以還原備份');
+ if(isVault(x))ask('還原會取代而家所有資料。還原之後要用<b>建立備份嗰陣嘅密碼</b>登入。確定？',async()=>{await flush();GK=null;PK=null;S=null;VAULT=x;await idbPut('vault',x);for(const k of['ncstate','ncbase'])await idbDel(k);loginView('已還原備份。請用備份嘅密碼登入。')});
  else if(x.company&&Array.isArray(x.docs)&&Array.isArray(x.styles))ask(`匯入舊版（未加密）備份，會取代而家所有資料（備份有 ${x.styles.length} 個款式、${x.docs.length} 張單）。確定？`,()=>{S={...x,auth:S.auth,settings:{...S.settings,...(x.settings||{}),lockMin:S.settings.lockMin}};save();toast('已匯入');go('home')});
  else toast('檔案格式唔啱')};r.readAsText(f)}
-function exportCSV(){const rows=[['客人PO','內部訂單號','日期','客戶','款號','客人款號','顏色','碼數','雙數','客人價','工廠價','ETD','狀態']];
- docsOf('CO').forEach(c=>c.lines.forEach(l=>Object.entries(l.qty||{}).forEach(([z,q])=>{if(num(q))rows.push([c.custPO,c.no,c.date,findCust(c.cust).name||c.cust,l.devNo,findStyle(l.devNo).custStyle||'',l.color,z,q,l.price,findStyle(l.devNo).factoryPrice??'',c.etd,c.status])})));
+function exportCSV(){const cp=CANP();const rows=[['客人PO','內部訂單號','日期','客戶','款號','客人款號','顏色','碼數','雙數',...(cp?['客人價','工廠價']:[]),'ETD','狀態']];
+ docsOf('CO').forEach(c=>c.lines.forEach(l=>Object.entries(l.qty||{}).forEach(([z,q])=>{if(num(q))rows.push([c.custPO,c.no,c.date,findCust(c.cust).name||c.cust,l.devNo,findStyle(l.devNo).custStyle||'',l.color,z,q,...(cp?[l.price,findStyle(l.devNo).factoryPrice??'']:[]),c.etd,c.status])})));
  download(`訂單明細-${today()}.csv`,'\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),'text/csv')}
 function helpView(){return `<h2>使用說明</h2>
  <div class="card"><h3>開始之前</h3><ol><li><a href="#company">公司資料</a>：改做你公司名、地址、銀行資料。</li><li><a href="#customers">客戶</a>、<a href="#factories">工廠</a>：入你嘅資料（範例資料可以刪除）。</li></ol></div>
@@ -618,7 +623,8 @@ function matrixPrint(lines,o){// o:{devNo, price:(l)=>price|null, cur}
   ${ls.map(l=>{const q=qtyTot(l.qty);const p=o.price?num(o.price(l)):0;gq+=q;ga+=q*p;return `<tr><td class="c">${esc(l.color)}</td>${sizes.map(z=>`<td class="c">${num(l.qty?.[z])||''}</td>`).join('')}<td class="c"><b>${f0(q)}</b></td>${o.price?`<td class="r">${f2(p)}</td><td class="r">${f2(q*p)}</td>`:''}</tr>`}).join('')}
   <tr class="tot"><td class="c">Sub-total</td>${st.map(v=>`<td class="c">${v||''}</td>`).join('')}<td class="c">${f0(gq)}</td>${o.price?`<td></td><td class="r">${f2(ga)}</td>`:''}</tr></table>`;GQ+=gq;GA+=ga});
  return {h,GQ,GA}}
-function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=curOf(d);let h=lh();
+function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=curOf(d);const cp=CANP();let h=lh();
+ if(!cp&&['QT','PO','PI','INV','CO'].includes(d.type))h+=`<div class="nopr">內部版本：不含價錢（由同事 ${esc(ME?.name||'')} 列印）</div>`;
  if(d.type==='SD'){const s=findStyle(d.devNo);const imgs=[...(s.images||[]),...(d.images||[])];
   h+=`<div class="title">樣板開發單 SAMPLE DEVELOPMENT SHEET</div><table class="t">${[['樣板單號 No.',d.no,'日期 Date',d.date],['開發款號 Style',d.devNo+(s.custStyle?' / 客款 '+s.custStyle:''),'工廠 Factory',fa.name||''],['品名',s.name||'','客戶 Customer',cu.name||''],['樣板類型 Type',d.stype,'數量 Qty',d.qty],['生產碼段',s.sizeRange||'','樣板碼數 Size',d.sampleSize],['顏色 Colors',d.colors,'要求交樣 Due',d.due]].map(r=>`<tr><td class="lb">${r[0]}</td><td style="width:30%">${esc(r[1])}</td><td class="lb">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
   <div class="sec">圖片 PICTURE</div><div class="pic">${imgs.map(x=>`<img src="${x}">`).join('')||'<span style="color:#999">（冇圖片）</span>'}</div>
@@ -627,19 +633,19 @@ function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=
   <div class="sec">工廠回覆 Factory Reply</div><table class="t">${[['樣板費 Sample Cost',d.reply.cost,'大貨價 Bulk Price',d.reply.bulk],['開模費 Mould Cost',d.reply.mould,'生產期 Lead Time',d.reply.lead],['MOQ',d.reply.moq,'實際交樣 Delivered',d.reply.delivered]].map(r=>`<tr><td class="lb">${r[0]}</td><td style="width:30%">${esc(r[1])}</td><td class="lb">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
   ${sign(['','開單人 Prepared by'],['','工廠確認 Factory Confirm'])}`}
  if(d.type==='QT'){h+=`<div class="title">QUOTATION</div><div class="two">${custBlock(d)}<div>${kv([['Quotation No.:',d.no],['Date:',d.date],['Valid Until:',d.valid],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>
-  <table class="t"><tr><th>No.</th><th>Picture</th><th>Style No.</th><th>Description</th><th>Material</th><th>Size Range</th><th>Colors</th><th>MOQ (Prs)</th><th>Unit Price (${cur})</th><th>Remarks</th></tr>
-  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c" style="width:30mm;height:24mm">${imgOf(l.devNo)?`<img src="${imgOf(l.devNo)}">`:''}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td>${esc([s.upper,s.lining,s.sole].filter(Boolean).join(' / '))}</td><td class="c">${esc(s.sizeRange)}</td><td class="c">${esc(l.colors)}</td><td class="c">${l.moq===''?'':f0(l.moq)}</td><td class="r"><b>${f2(l.price)}</b></td><td>${esc(l.rem)}</td></tr>`}).join('')}</table>
+  <table class="t"><tr><th>No.</th><th>Picture</th><th>Style No.</th><th>Description</th><th>Material</th><th>Size Range</th><th>Colors</th><th>MOQ (Prs)</th>${cp?`<th>Unit Price (${cur})</th>`:''}<th>Remarks</th></tr>
+  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c" style="width:30mm;height:24mm">${imgOf(l.devNo)?`<img src="${imgOf(l.devNo)}">`:''}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td>${esc([s.upper,s.lining,s.sole].filter(Boolean).join(' / '))}</td><td class="c">${esc(s.sizeRange)}</td><td class="c">${esc(l.colors)}</td><td class="c">${l.moq===''?'':f0(l.moq)}</td>${cp?`<td class="r"><b>${f2(l.price)}</b></td>`:''}<td>${esc(l.rem)}</td></tr>`}).join('')}</table>
   <div class="sec">TERMS & CONDITIONS</div>${kv([['Payment:',cu.payment||''],['Lead Time:',d.leadTime],['Port of Loading:',c.pol],['Packing:',d.packing],['Sample:',d.sample],['Remarks:',d.remarks]],1)}
   <p style="font-size:10px">We look forward to your valued order.</p>${sign(['',''],[ours(),esc(c.contact)])}`}
- if(d.type==='PO'){const s=findStyle(d.devNo);const m=matrixPrint(d.lines,{devNo:d.devNo,price:()=>d.cost});
+ if(d.type==='PO'){const s=findStyle(d.devNo);const m=matrixPrint(d.lines,{devNo:d.devNo,price:cp?()=>d.cost:null});
   h+=`<div class="title">PURCHASE ORDER 採購單</div><div class="two"><div><b>To:</b><br><b>${esc(fa.name||'')}</b><br>${esc(fa.addr||'')}<br>聯絡人: ${esc(fa.attn||'')} &nbsp; 電話: ${esc(fa.tel||'')}</div><div>${kv([['PO No.:',d.no],['Date:',d.date],['客人 PO No.:',d.custPO],['交貨期 Delivery:',d.delivery],['付款 Payment:',fa.payment||'']])}</div></div>
   <div class="two" style="align-items:flex-start"><div style="flex:0 0 45mm">${imgOf(d.devNo)?`<img src="${imgOf(d.devNo)}" style="max-width:45mm;max-height:40mm;border:1px solid #999">`:''}</div><div>${kv([['款號 Style No.:',d.devNo],['客人款號:',s.custStyle||''],['品名:',s.name||''],['鞋面 Upper:',s.upper||''],['內裡 Lining:',s.lining||''],['鞋底 Sole:',s.sole||''],['碼段 Size:',s.sizeRange||'']],1)}</div></div>
-  ${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:22mm">${f0(m.GQ)} Prs</td><td class="r" style="width:30mm">${f2(m.GA)}</td></tr></table>
+  ${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:22mm">${f0(m.GQ)} Prs</td>${cp?`<td class="r" style="width:30mm">${f2(m.GA)}</td>`:''}</tr></table>
   <div class="sec">生產要求 Requirements</div>${kv([['物料 Material:',d.req.mat],['包裝 Packing:',d.req.pack],['嘜頭 Shipping Mark:',d.req.mark],['質量 Quality:',d.req.qc],['驗貨 Inspection:',d.req.insp],['備註 Remarks:',d.req.rem]],1)}
   ${sign([`<b>Issued by:</b><br><span style="font-size:9px">${esc(c.en)}</span>`,'簽名 Signature'],['<b>工廠確認 Confirmed by Factory:</b>','簽名及蓋章 Signature & Chop（請簽回）'])}`}
- if(d.type==='PI'){const m=matrixPrint(d.lines,{price:l=>l.price});
+ if(d.type==='PI'){const m=matrixPrint(d.lines,{price:cp?l=>l.price:null});
   h+=`<div class="title">${esc(d.title)}</div><div class="two">${custBlock(d)}<div>${kv([['No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>${m.h}
-  <table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td><td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td></tr></table>${d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
+  <table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td>${cp?`<td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td>`:''}</tr></table>${cp&&d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
   <div class="sec">TERMS & CONDITIONS</div>${kv([['Payment:',cu.payment||''],['Delivery (ETD):',d.etd],['Port of Loading:',c.pol],['Destination:',cu.dest||''],['Packing:',d.packing],['Remarks:',d.remarks]],1)}${bankBlock()}${sign(['<b>Confirmed & Accepted by Buyer:</b>','Authorized Signature & Company Chop'],[ours(),'Authorized Signature'])}`}
  if(d.type==='PL'){const t=plTotals(d);const groups=[...new Set(d.lines.map(l=>l.devNo))];
   h+=`<div class="title">PACKING LIST</div><div class="two">${custBlock(d)}<div>${kv([['Invoice No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['From:',d.from],['To:',d.to],['Vessel / Voy.:',d.vessel]])}</div></div>`;
@@ -653,13 +659,13 @@ function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=
  if(d.type==='INV'){const t=invTotals(d);const pl=docById(d.plId);const p=pl?plTotals(pl):null;const co=docById(d.coId);const dep=d.lessDeposit&&co?deposits(co):0;
   h+=`<div class="title">COMMERCIAL INVOICE</div><div class="two">${custBlock(d)}<div>${kv([['Invoice No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['Currency:',cur],['Price Term:',priceTerm(d)],['Payment:',cu.payment||'']])}</div></div>
   <div style="margin-bottom:8px">${kv([['Shipped From:',d.from],['Shipped To:',d.to],['Vessel / Voy.:',d.vessel],['Country of Origin:',c.origin]],1)}</div>
-  <table class="t"><tr><th>No.</th><th>Style No.</th><th>Description</th><th>HS Code</th><th>Color</th><th>Qty (Prs)</th><th>Unit Price</th><th>Amount</th></tr>
-  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td class="c">${esc(s.hs)}</td><td class="c">${esc(l.color)}</td><td class="r">${f0(l.qty)}</td><td class="r">${f2(l.price)}</td><td class="r">${f2(num(l.qty)*num(l.price))}</td></tr>`}).join('')}
-  <tr class="tot"><td colspan="5" style="text-align:right">TOTAL</td><td class="r">${f0(t.qty)}</td><td class="c">${cur}</td><td class="r">${f2(t.amt)}</td></tr>
-  ${dep?`<tr><td colspan="7" style="text-align:right">Less: Deposit Received</td><td class="r">(${f2(dep)})</td></tr><tr class="tot"><td colspan="7" style="text-align:right">BALANCE DUE</td><td class="r">${cur} ${f2(t.amt-dep)}</td></tr>`:''}</table>
-  ${d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
+  <table class="t"><tr><th>No.</th><th>Style No.</th><th>Description</th><th>HS Code</th><th>Color</th><th>Qty (Prs)</th>${cp?'<th>Unit Price</th><th>Amount</th>':''}</tr>
+  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td class="c">${esc(s.hs)}</td><td class="c">${esc(l.color)}</td><td class="r">${f0(l.qty)}</td>${cp?`<td class="r">${f2(l.price)}</td><td class="r">${f2(num(l.qty)*num(l.price))}</td>`:''}</tr>`}).join('')}
+  <tr class="tot"><td colspan="5" style="text-align:right">TOTAL</td><td class="r">${f0(t.qty)}</td>${cp?`<td class="c">${cur}</td><td class="r">${f2(t.amt)}</td>`:''}</tr>
+  ${cp&&dep?`<tr><td colspan="7" style="text-align:right">Less: Deposit Received</td><td class="r">(${f2(dep)})</td></tr><tr class="tot"><td colspan="7" style="text-align:right">BALANCE DUE</td><td class="r">${cur} ${f2(t.amt-dep)}</td></tr>`:''}</table>
+  ${cp&&d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
   <div class="two"><div>${p?`<div class="sec">PACKING SUMMARY</div>${kv([['Total Cartons:',f0(p.ctn)],['Total Pairs:',f0(p.prs)],['Total N.W.:',f1(p.nw)+' kg'],['Total G.W.:',f1(p.gw)+' kg'],['Measurement:',f3(p.cbm)+' CBM']],1)}`:''}</div><div>${bankBlock()}</div></div>${sign(['',''],[ours(),'Authorized Signature'])}`}
- if(d.type==='CO'){const m=matrixPrint(d.lines,{price:l=>l.price});h+=`<div class="title">ORDER DETAILS 訂單明細（內部）</div><div class="two">${custBlock(d)}<div>${kv([['客人 PO:',d.custPO],['Date:',d.date],['ETD:',d.etd],['Payment:',d.payment]])}</div></div>${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td><td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td></tr></table>`}
+ if(d.type==='CO'){const m=matrixPrint(d.lines,{price:cp?l=>l.price:null});h+=`<div class="title">ORDER DETAILS 訂單明細（內部）</div><div class="two">${custBlock(d)}<div>${kv([['客人 PO:',d.custPO],['Date:',d.date],['ETD:',d.etd],['Payment:',d.payment]])}</div></div>${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td>${cp?`<td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td>`:''}</tr></table>`}
  return h}
 function preview(id){const d=docById(id);const land=d.type==='PL'&&d.lines.some(l=>sizesOf(l.devNo).length>10);
  document.getElementById('printArea').innerHTML=`<div class="doc ${land?'land':''}">${docHTML(d)}</div>`;
@@ -673,7 +679,13 @@ function closePreview(silent){document.body.classList.remove('preview');document
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('preview'))closePreview()});
 
 
-/* =================== 加密儲存 + 登入（密碼 + 手機驗證碼） =================== */
+/* =================== 加密儲存 + 登入（負責人：密碼 + 手機驗證碼；同事：名 + 密碼） ===================
+ 資料分兩份加密：
+   gdata（一般資料）用 GK 加密 —— 負責人同同事都有 GK
+   pdata（價錢資料 + 負責人驗證碼）用 PK 加密 —— 只有負責人有 PK
+ VAULT v2 = {v:2, users:[{id,name,role:'owner'|'staff',w}], rc, gk, gdata, pdata, label, created, rev}
+   owner.w = 用密碼包住 PK；staff.w = 用密碼包住 GK；rc = 用恢復碼包住 PK；gk = 用 PK 加密嘅 GK
+*/
 const DBNAME='shoe-office-v2',STORE='kv';
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBNAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function idbGet(k){const db=await idb();return new Promise(res=>{const q=db.transaction(STORE).objectStore(STORE).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})}
@@ -691,6 +703,10 @@ async function wrapWith(secret,dk){const salt=rand(16),iv=rand(12);const k=await
 async function unwrapWith(secret,w){const k=await kek(secret,unb64(w.salt),w.iter||ITER);return crypto.subtle.unwrapKey('raw',unb64(w.wk),k,{name:'AES-GCM',iv:unb64(w.iv)},{name:'AES-GCM'},true,['encrypt','decrypt'])}
 async function encData(dk,obj){const iv=rand(12);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},dk,te.encode(JSON.stringify(obj)));return{iv:b64(iv),ct:b64(ct)}}
 async function decData(dk,d){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(d.iv)},dk,unb64(d.ct));return JSON.parse(td.decode(pt))}
+const newKey=()=>crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+async function keyRaw(k){return b64(await crypto.subtle.exportKey('raw',k))}
+async function encKey(pk,k){const iv=rand(12);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},pk,await crypto.subtle.exportKey('raw',k));return{iv:b64(iv),ct:b64(ct)}}
+async function decKey(pk,d){const raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(d.iv)},pk,unb64(d.ct));return crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},true,['encrypt','decrypt'])}
 
 /* ---- TOTP (RFC 6238, 30 秒, 6 位) ---- */
 const B32='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -700,7 +716,7 @@ async function hotp(secret,counter){const key=await crypto.subtle.importKey('raw
  const msg=new Uint8Array(8);let c=counter;for(let i=7;i>=0;i--){msg[i]=c&255;c=Math.floor(c/256)}
  const h=new Uint8Array(await crypto.subtle.sign('HMAC',key,msg));const o=h[h.length-1]&15;
  const code=(((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1000000;return String(code).padStart(6,'0')}
-async function verifyTotp(secret,code){code=String(code||'').replace(/\D/g,'');if(code.length!==6)return false;const t=Math.floor(Date.now()/30000);for(const w of[-1,0,1])if(await hotp(secret,t+w)===code)return true;return false}
+async function verifyTotp(secret,code){code=String(code||'').replace(/\D/g,'');if(code.length!==6||!secret)return false;const t=Math.floor(Date.now()/30000);for(const w of[-1,0,1])if(await hotp(secret,t+w)===code)return true;return false}
 const ISSUER='童鞋貿易辦公室';
 function deviceLabel(){const u=navigator.userAgent;if(/iPhone/.test(u))return 'iPhone';if(/iPad/.test(u)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return 'iPad';if(/Android/.test(u))return 'Android';if(/Mac/.test(u))return 'Mac電腦';if(/Windows/.test(u))return 'Windows電腦';return '電腦'}
 const otpUri=(secret,label)=>`otpauth://totp/${encodeURIComponent(ISSUER+':'+label)}?secret=${secret}&issuer=${encodeURIComponent(ISSUER)}&algorithm=SHA1&digits=6&period=30`;
@@ -708,116 +724,194 @@ function qrSvg(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.cre
 function newRecoveryCode(){const b=rand(20);let s='';for(const x of b)s+=B32[x&31];return s.match(/.{4}/g).join('-')}
 const normRC=s=>String(s||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
 
+/* ---- 價錢分離 ---- */
+const PRICE_STYLE=['factoryPrice','sellPrice','sampleCost'];
+const PRICE_DOC={SD:{f:['reply.cost','reply.bulk','reply.mould']},QT:{l:['price']},CO:{l:['price'],f:['payments']},PO:{f:['cost']},PI:{l:['price'],f:['sayTotal']},INV:{l:['price'],f:['sayTotal']}};
+function delPath(o,p){const ks=pathKeys(p);const last=ks.pop();const t=ks.reduce((a,k)=>a==null?a:a[k],o);if(t&&typeof t==='object')delete t[last]}
+function splitData(s){(s.docs||[]).forEach(d=>(d.lines||[]).forEach(l=>{if(!l.lid)l.lid=uid()}));
+ const G=JSON.parse(JSON.stringify(s));const P={styles:{},docs:{},auth:G.auth||{}};delete G.auth;
+ (G.styles||[]).forEach(st=>{const o={};PRICE_STYLE.forEach(k=>{if(k in st){o[k]=st[k];delete st[k]}});if(Object.keys(o).length)P.styles[st.id]=o});
+ (G.docs||[]).forEach(d=>{const R=PRICE_DOC[d.type];if(!R)return;const o={f:{},l:{}};
+  (R.f||[]).forEach(p=>{const v=getPath(d,p);if(v!==undefined){o.f[p]=v;delPath(d,p)}});
+  (R.l||[]).forEach(k=>(d.lines||[]).forEach(l=>{if(k in l){(o.l[l.lid]=o.l[l.lid]||{})[k]=l[k];delete l[k]}}));
+  if(Object.keys(o.f).length||Object.keys(o.l).length)P.docs[d.id]=o});
+ return{G,P}}
+function mergeData(G,P){const s=JSON.parse(JSON.stringify(G));s.auth=(P&&P.auth)||{};P=P||{styles:{},docs:{}};
+ (s.styles||[]).forEach(st=>Object.assign(st,P.styles?.[st.id]||{}));
+ (s.docs||[]).forEach(d=>{const o=P.docs?.[d.id];if(!o)return;Object.entries(o.f||{}).forEach(([p,v])=>setPath(d,p,v));(d.lines||[]).forEach(l=>Object.assign(l,o.l?.[l.lid]||{}))});
+ fillMissingPrices(s);return s}
+// 同事開嘅單冇價錢：負責人登入時自動由報價 / 款式 / 訂單補返預設價
+function fillMissingPrices(s){const st=n=>(s.styles||[]).find(x=>x.devNo===n)||{};const doc=id=>(s.docs||[]).find(x=>x.id===id);
+ (s.docs||[]).forEach(d=>{
+  if(d.type==='SD'){d.reply=d.reply||{};['cost','bulk','mould'].forEach(k=>{if(d.reply[k]===undefined)d.reply[k]=''})}
+  if(d.type==='PO'&&d.cost===undefined)d.cost=st(d.devNo).factoryPrice??'';
+  if(d.type==='CO'&&d.payments===undefined)d.payments=[];
+  if((d.type==='PI'||d.type==='INV')&&d.sayTotal===undefined)d.sayTotal='';
+  (d.lines||[]).forEach(l=>{if(!['QT','CO','PI','INV'].includes(d.type)||l.price!==undefined)return;let p;
+   if(d.type==='CO'){const q=doc(d.qtId);p=q?.lines.find(x=>x.devNo===l.devNo)?.price}
+   if(d.type==='PI'||d.type==='INV'){const c=doc(d.coId);p=(c?.lines.find(x=>x.devNo===l.devNo&&x.color===l.color)||c?.lines.find(x=>x.devNo===l.devNo))?.price}
+   l.price=p??st(l.devNo).sellPrice??''})})}
+
 /* ---- 狀態 ---- */
-let S=null,DK=null,VAULT=null,saveChain=Promise.resolve(),saveTimer=null;
-function save(){if(!DK)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,300);ncMarkDirty()}
-function flush(){clearTimeout(saveTimer);if(!DK||!S)return saveChain;const dk=DK,snap=S;
- saveChain=saveChain.then(async()=>{snap.savedAt=new Date().toISOString();VAULT.data=await encData(dk,snap);await idbPut('vault',VAULT)}).catch(e=>{console.error(e);toast('⚠ 儲存失敗，請即刻備份')});return saveChain}
-window.addEventListener('beforeunload',()=>{if(DK)flush()});
+let S=null,GK=null,PK=null,ME=null,VAULT=null,saveChain=Promise.resolve(),saveTimer=null;
+const CANP=()=>!!PK;  // 睇到價錢 = 負責人
+function save(){if(!GK)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,300);ncMarkDirty()}
+function flush(){clearTimeout(saveTimer);if(!GK||!S)return saveChain;const gk=GK,pk=PK,snap=S;
+ saveChain=saveChain.then(async()=>{snap.savedAt=new Date().toISOString();const{G,P}=splitData(snap);VAULT.gdata=await encData(gk,G);if(pk)VAULT.pdata=await encData(pk,P);await idbPut('vault',VAULT)}).catch(e=>{console.error(e);toast('⚠ 儲存失敗，請即刻備份')});return saveChain}
+window.addEventListener('beforeunload',()=>{if(GK)flush()});
+const owner=()=>VAULT?.users?.find(u=>u.role==='owner');
 
 /* ---- 登入畫面 ---- */
 const authEl=()=>document.getElementById('auth');
 function showAuth(html){document.getElementById('app').style.display='none';document.getElementById('printArea').innerHTML='';document.body.classList.remove('preview');
- const a=authEl();a.style.display='flex';a.innerHTML=`<div class="abox"><div class="alogo">👟 童鞋貿易辦公室系統</div>${html}</div>`;const f=a.querySelector('input');if(f)f.focus()}
+ const a=authEl();a.style.display='flex';a.innerHTML=`<div class="abox"><div class="alogo">👟 童鞋貿易辦公室系統</div>${html}</div>`;const f=a.querySelector('input:not([type=hidden]),select');if(f)f.focus()}
 function hideAuth(){authEl().style.display='none';authEl().innerHTML='';document.getElementById('app').style.display=''}
 const aerr=m=>{const e=document.getElementById('aerr');if(e){e.textContent=m;e.style.display=m?'block':'none'}};
 function busy(on,label){const b=document.getElementById('abtn');if(b){b.disabled=on;if(label)b.textContent=on?'處理中…':label}}
-
-/* 失敗次數限制（本機） */
 function throttle(){try{return JSON.parse(localStorage.getItem('so-fail'))||{n:0,until:0}}catch(e){return{n:0,until:0}}}
 function failOnce(){const t=throttle();t.n++;if(t.n>=5)t.until=Date.now()+60000*Math.pow(2,Math.min(t.n-5,6));localStorage.setItem('so-fail',JSON.stringify(t))}
 function failReset(){localStorage.removeItem('so-fail')}
+const tooMany=()=>{const t=throttle();return t.until>Date.now()?`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`:''};
+const authLinks=()=>`<div class="alinks"><a href="javascript:recoverView()">負責人：唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:ncLoadView()">☁ 由 Nextcloud 載入</a><a href="javascript:wipeView()" style="color:#b00">清除呢部機資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`;
 
-function loginView(msg){showAuth(`<h2>登入</h2>
- <form onsubmit="event.preventDefault();doLogin()"><label>密碼</label><input type="password" id="apw" autocomplete="current-password">
- <label>手機驗證碼（6 位數）</label><div class="amuted" style="margin:-2px 0 4px">用 Authenticator 入面「${ISSUER}（${esc(VAULT?.label||'admin')}）」嗰組數字</div><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
- <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div>
- <button class="pri" id="abtn" type="submit">登入</button></form>
- <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:ncLoadView()">☁ 由 Nextcloud 載入</a><a href="javascript:wipeView()" style="color:#b00">唔記得密碼又冇恢復碼？清除資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
-async function doLogin(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
- const pw=document.getElementById('apw').value,code=document.getElementById('acode').value;if(!pw||!code)return aerr('請輸入密碼同驗證碼');
- busy(true,'登入');aerr('');let dk,s;
- try{dk=await unwrapWith(pw,VAULT.pw);s=await decData(dk,VAULT.data)}catch(e){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤')}
+function loginView(msg){
+ if(!VAULT.users){// 舊版（未分角色）
+  return showAuth(`<h2>登入</h2><form onsubmit="event.preventDefault();doLoginV1()"><label>密碼</label><input type="password" id="apw" autocomplete="current-password">
+  <label>手機驗證碼（6 位數）</label><div class="amuted" style="margin:-2px 0 4px">用 Authenticator 入面「${ISSUER}（${esc(VAULT?.label||'admin')}）」嗰組數字</div><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+  <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div><button class="pri" id="abtn" type="submit">登入</button></form>${authLinks()}`)}
+ const last=localStorage.getItem('so-user');const us=VAULT.users;const sel0=us.find(u=>u.id===last)||us[0];
+ showAuth(`<h2>登入</h2><form onsubmit="event.preventDefault();doLogin()"><label>名稱</label><select id="auser" onchange="loginRole()">${us.map(u=>`<option value="${esc(u.id)}" ${u===sel0?'selected':''}>${esc(u.name)}${u.role==='owner'?'（負責人）':''}</option>`).join('')}</select>
+ <label>密碼</label><input type="password" id="apw" autocomplete="current-password">
+ <div id="acodebox"><label>手機驗證碼（6 位數）</label><div class="amuted" style="margin:-2px 0 4px">用 Authenticator 入面「${ISSUER}（${esc(VAULT.label||'admin')}）」嗰組數字</div><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"></div>
+ <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div><button class="pri" id="abtn" type="submit">登入</button></form>${authLinks()}`);
+ loginRole();setTimeout(()=>document.getElementById('apw')?.focus(),0)}
+function loginRole(){const u=VAULT.users.find(x=>x.id===document.getElementById('auser').value);document.getElementById('acodebox').style.display=u&&u.role==='owner'?'':'none'}
+async function doLogin(){const m=tooMany();if(m)return aerr(m);const u=VAULT.users.find(x=>x.id===document.getElementById('auser').value);const pw=document.getElementById('apw').value;
+ if(!u||!pw)return aerr('請揀名稱同輸入密碼');const code=document.getElementById('acode').value;if(u.role==='owner'&&!code)return aerr('請輸入手機驗證碼');
+ busy(true,'登入');aerr('');
+ try{const k=await unwrapWith(pw,u.w);let gk,pk=null,s;
+  if(u.role==='owner'){pk=k;gk=await decKey(pk,VAULT.gk);const P=await decData(pk,VAULT.pdata);
+   if(!(await verifyTotp(P.auth?.totp,code))){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤（驗證碼每 30 秒轉一次，請用最新嗰個）')}
+   s=mergeData(await decData(gk,VAULT.gdata),P)}
+  else{gk=k;s=await decData(gk,VAULT.gdata);delete s.auth}
+  failReset();localStorage.setItem('so-user',u.id);enterApp(gk,pk,u,s)}
+ catch(e){console.error(e);failOnce();busy(false,'登入');aerr(u.role==='owner'?'密碼或驗證碼錯誤':'密碼錯誤')}}
+// 舊版資料：登入後自動升級做 v2（價錢分開加密）
+async function doLoginV1(){const m=tooMany();if(m)return aerr(m);const pw=document.getElementById('apw').value,code=document.getElementById('acode').value;if(!pw||!code)return aerr('請輸入密碼同驗證碼');
+ busy(true,'登入');let dk,s;try{dk=await unwrapWith(pw,VAULT.pw);s=await decData(dk,VAULT.data)}catch(e){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤')}
  if(!(await verifyTotp(s.auth?.totp,code))){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤（驗證碼每 30 秒轉一次，請用最新嗰個）')}
- failReset();enterApp(dk,s)}
-function enterApp(dk,s){DK=dk;S=s;S.settings=S.settings||{};S.settings.sampleStages=S.settings.sampleStages||[...DEF_SAMPLE_STAGES];S.settings.prodStages=S.settings.prodStages||[...DEF_PROD_STAGES];S.settings.lockMin=S.settings.lockMin||15;
+ failReset();const u=await upgradeV1(dk,s);enterApp(GK,dk,u,s);toast('系統已升級：價錢已經分開加密 🔒')}
+async function upgradeV1(dk,s){const gk=await newKey();const old=VAULT;const{G,P}=splitData(s);
+ const u={id:'owner',name:'負責人',role:'owner',w:old.pw};// 固定 id：兩部舊機各自升級都係同一個用戶
+ VAULT={v:2,label:old.label,created:old.created,rev:old.rev,users:[u],rc:old.rc,gk:await encKey(dk,gk),gdata:await encData(gk,G),pdata:await encData(dk,P)};
+ await idbPut('vault',VAULT);GK=gk;localStorage.setItem('so-user',u.id);return u}
+function enterApp(gk,pk,u,s){GK=gk;PK=pk;ME={id:u.id,name:u.name,role:u.role};S=s;
+ S.settings=S.settings||{};S.settings.sampleStages=S.settings.sampleStages||[...DEF_SAMPLE_STAGES];S.settings.prodStages=S.settings.prodStages||[...DEF_PROD_STAGES];S.settings.lockMin=S.settings.lockMin||15;
  lastAct=Date.now();hideAuth();route();ncInit()}
-async function lockNow(msg){if(DK)await flush();if(NC&&NCST.dirty){try{await ncPush()}catch(e){}}S=null;DK=null;NC=null;D=null;document.getElementById('main').innerHTML='';loginView(msg||'')}
+async function lockNow(msg){if(GK)await flush();if(NC&&NCST.dirty){try{await ncPush()}catch(e){}}S=null;GK=null;PK=null;ME=null;NC=null;D=null;document.getElementById('main').innerHTML='';loginView(msg||'')}
 
 /* 閒置自動鎖 */
 let lastAct=Date.now();['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>window.addEventListener(ev,()=>{lastAct=Date.now()},{passive:true}));
-setInterval(()=>{if(DK&&S&&Date.now()-lastAct>(S.settings.lockMin||15)*60000)lockNow('閒置太耐，已自動鎖定。')},20000);
+setInterval(()=>{if(GK&&S&&Date.now()-lastAct>(S.settings.lockMin||15)*60000)lockNow('閒置太耐，已自動鎖定。')},20000);
 
-/* ---- 首次設定 / 重設 ---- */
-let SETUP=null;// {mode:'new'|'recover', plain, dk, s, pw, totp, rc}
+/* ---- 首次設定（負責人）/ 用恢復碼重設 ---- */
+let SETUP=null;// {mode:'new'|'recover', plain, pk, gk, s, name, pw, totp, rc}
 function setupStart(plain){SETUP={mode:'new',plain};setupPw()}
-function setupPw(){showAuth(`<h2>${SETUP.mode==='recover'?'設定新密碼':'第一次使用：設定密碼'}</h2><div class="steps"><b>1. 密碼</b> → 2. 手機驗證碼 → 3. 恢復碼</div>
- <p class="amuted">資料會用呢個密碼加密，存喺呢部電腦。最少 8 個字，建議用一句容易記嘅句子。</p>
- <form onsubmit="event.preventDefault();setupPw2()"><label>密碼</label><input type="password" id="apw" autocomplete="new-password"><label>再輸入一次</label><input type="password" id="apw2" autocomplete="new-password">
+function setupPw(){const rec=SETUP.mode==='recover';showAuth(`<h2>${rec?'設定新密碼':'第一次使用：負責人設定'}</h2><div class="steps"><b>1. 名稱同密碼</b> → 2. 手機驗證碼 → 3. 恢復碼</div>
+ <p class="amuted">你係<b>負責人</b>，可以睇到所有價錢。資料會用你嘅密碼加密。密碼最少 8 個字。<br>同事帳戶可以之後喺「👥 用戶管理」加。</p>
+ <form onsubmit="event.preventDefault();setupPw2()">${rec?'':'<label>你嘅名稱</label><input id="aname" placeholder="例如 Martin" autocomplete="off">'}<label>密碼</label><input type="password" id="apw" autocomplete="new-password"><label>再輸入一次</label><input type="password" id="apw2" autocomplete="new-password">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">下一步</button></form>
- ${SETUP.mode==='new'?`<div class="alinks"><a href="javascript:ncLoadView()">☁ 已經喺其他機用 Nextcloud 同步？由 Nextcloud 載入</a><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`:''}`)}
-function setupPw2(){const a=document.getElementById('apw').value,b=document.getElementById('apw2').value;if(a.length<8)return aerr('密碼最少要 8 個字');if(a!==b)return aerr('兩次輸入嘅密碼唔一樣');SETUP.pw=a;SETUP.totp=b32enc(rand(20));setupTotp()}
-function setupTotp(){const uri=otpUri(SETUP.totp,deviceLabel());showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
+ ${rec?'':`<div class="alinks"><a href="javascript:ncLoadView()">☁ 已經喺其他機用 Nextcloud 同步？由 Nextcloud 載入（同事用呢個）</a><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`}`)}
+function setupPw2(){const n=SETUP.mode==='recover'?'x':(document.getElementById('aname').value.trim()||'負責人');const a=document.getElementById('apw').value,b=document.getElementById('apw2').value;
+ if(a.length<8)return aerr('密碼最少要 8 個字');if(a!==b)return aerr('兩次輸入嘅密碼唔一樣');SETUP.name=n;SETUP.pw=a;SETUP.totp=b32enc(rand(20));setupTotp()}
+function setupTotp(){const uri=otpUri(SETUP.totp,deviceLabel());showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 名稱同密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
  <ol class="amuted" style="text-align:left;padding-left:18px"><li>喺手機安裝 <b>Google Authenticator</b> 或者 <b>Microsoft Authenticator</b>（免費）。</li><li>喺 App 入面揀「＋」→「掃描 QR 碼」，掃下面個 QR 碼。</li><li>將 App 顯示嘅 6 位數字輸入落下面。</li></ol>
- <p class="amuted" style="background:#f1f4fa;padding:8px;border-radius:4px">掃完之後，App 入面會多一個「<b>${ISSUER}（${deviceLabel()}）</b>」。<br>如果你喺其他機（例如 iPhone / 電腦）都設定過，App 會有幾個記錄，<b>每部機要用返佢自己嗰個</b>。</p><div class="qr">${qrSvg(uri)}</div><div class="amuted">掃唔到？喺 App 揀「手動輸入」，金鑰：<br><code class="key">${SETUP.totp.match(/.{4}/g).join(' ')}</code></div>
+ <p class="amuted" style="background:#f1f4fa;padding:8px;border-radius:4px">掃完之後，App 入面會多一個「<b>${ISSUER}（${deviceLabel()}）</b>」，之後負責人登入就用呢組數字。</p><div class="qr">${qrSvg(uri)}</div><div class="amuted">掃唔到？喺 App 揀「手動輸入」，金鑰：<br><code class="key">${SETUP.totp.match(/.{4}/g).join(' ')}</code></div>
  <form onsubmit="event.preventDefault();setupTotp2()"><label>App 顯示嘅 6 位數字</label><input id="acode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">確認</button></form>`)}
 async function setupTotp2(){if(!(await verifyTotp(SETUP.totp,document.getElementById('acode').value)))return aerr('驗證碼唔啱，請再試（確認手機時間正確）');SETUP.rc=newRecoveryCode();setupRC()}
-function setupRC(){showAuth(`<h2>保存恢復碼</h2><div class="steps">1. 密碼 → 2. 手機驗證碼 → <b>3. 恢復碼</b></div>
- <p class="amuted">如果你<b>唔記得密碼</b>或者<b>唔見咗手機</b>，就要靠呢組恢復碼先開到啲資料。<b>冇咗佢，資料就一世開唔返</b>，連我都幫你唔到。</p>
+function setupRC(){showAuth(`<h2>保存恢復碼</h2><div class="steps">1. 名稱同密碼 → 2. 手機驗證碼 → <b>3. 恢復碼</b></div>
+ <p class="amuted">如果你<b>唔記得密碼</b>或者<b>唔見咗手機</b>，就要靠呢組恢復碼先開到啲資料。<b>冇咗佢，價錢資料就一世開唔返</b>。</p>
  <div class="rc">${SETUP.rc}</div><p class="amuted">請抄低，或者影相存喺安全嘅地方（唔好同電腦放埋一齊）。</p>
- <div class="bar" style="justify-content:center"><button onclick="navigator.clipboard&&navigator.clipboard.writeText('${SETUP.rc}').then(()=>toast('已複製'))">複製</button><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${SETUP.rc}\\r\\n\\r\\n用途：唔記得密碼或者唔見咗手機時，喺登入畫面揀「用恢復碼」。','text/plain')">下載做文字檔</button></div>
+ <div class="bar" style="justify-content:center"><button onclick="navigator.clipboard&&navigator.clipboard.writeText('${SETUP.rc}').then(()=>toast('已複製'))">複製</button><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${SETUP.rc}\\r\\n\\r\\n用途：負責人唔記得密碼或者唔見咗手機時，喺登入畫面揀「用恢復碼」。','text/plain')">下載做文字檔</button></div>
  <label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input type="checkbox" id="aok" style="width:auto"> 我已經保存好恢復碼</label>
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" onclick="setupFinish()">完成，開始使用</button>`)}
 async function setupFinish(){if(!document.getElementById('aok').checked)return aerr('請先保存恢復碼，再剔選上面個格');busy(true,'完成，開始使用');
- try{let dk=SETUP.dk,s=SETUP.s;
-  if(SETUP.mode==='new'){dk=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);s=SETUP.plain||seed()}
-  s.auth={totp:SETUP.totp};
-  VAULT={v:1,label:deviceLabel(),created:VAULT?.created||new Date().toISOString(),pw:await wrapWith(SETUP.pw,dk),rc:await wrapWith(normRC(SETUP.rc),dk),data:await encData(dk,s)};
-  await idbPut('vault',VAULT);await idbDel('state');SETUP=null;failReset();enterApp(dk,s);toast('設定完成 🔒')}
+ try{let pk=SETUP.pk,gk=SETUP.gk,s=SETUP.s,u;
+  if(SETUP.mode==='new'){pk=await newKey();gk=await newKey();s=SETUP.plain||seed();delete s.auth;u={id:uid(),name:SETUP.name,role:'owner',w:await wrapWith(SETUP.pw,pk)};
+   VAULT={v:2,label:deviceLabel(),created:new Date().toISOString(),users:[u],gk:await encKey(pk,gk)}}
+  else{u=owner();u.w=await wrapWith(SETUP.pw,pk);VAULT.label=deviceLabel()}
+  s.auth={totp:SETUP.totp};VAULT.rc=await wrapWith(normRC(SETUP.rc),pk);
+  const{G,P}=splitData(s);VAULT.gdata=await encData(gk,G);VAULT.pdata=await encData(pk,P);
+  await idbPut('vault',VAULT);await idbDel('state');const rec=SETUP.mode==='recover';SETUP=null;failReset();localStorage.setItem('so-user',u.id);enterApp(gk,pk,u,s);if(rec)ncMarkDirty();toast('設定完成 🔒')}
  catch(e){console.error(e);busy(false,'完成，開始使用');aerr('出錯：'+e.message)}}
 
-/* ---- 恢復碼登入 ---- */
-function recoverView(){showAuth(`<h2>用恢復碼登入</h2><p class="amuted">輸入你設定時保存嘅恢復碼。登入之後要重新設定密碼同手機驗證碼，並會換一組新嘅恢復碼。</p>
+/* ---- 恢復碼登入（負責人） ---- */
+function recoverView(){showAuth(`<h2>用恢復碼登入（負責人）</h2><p class="amuted">輸入你設定時保存嘅恢復碼。登入之後要重新設定密碼同手機驗證碼，並會換一組新嘅恢復碼。<br>同事唔記得密碼：請負責人喺「👥 用戶管理」幫佢重設。</p>
  <form onsubmit="event.preventDefault();doRecover()"><label>恢復碼</label><input id="arc" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">確認</button></form><div class="alinks"><a href="javascript:loginView()">← 返回登入</a></div>`)}
-async function doRecover(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
- busy(true,'確認');try{const dk=await unwrapWith(normRC(document.getElementById('arc').value),VAULT.rc);const s=await decData(dk,VAULT.data);failReset();SETUP={mode:'recover',dk,s};setupPw()}
- catch(e){failOnce();busy(false,'確認');aerr('恢復碼唔啱')}}
+async function doRecover(){const m=tooMany();if(m)return aerr(m);busy(true,'確認');
+ try{const pk=await unwrapWith(normRC(document.getElementById('arc').value),VAULT.rc);let gk,s;
+  if(!VAULT.users){s=await decData(pk,VAULT.data);await upgradeV1(pk,s);gk=GK}
+  else{gk=await decKey(pk,VAULT.gk);s=mergeData(await decData(gk,VAULT.gdata),await decData(pk,VAULT.pdata))}
+  failReset();SETUP={mode:'recover',pk,gk,s};setupPw()}
+ catch(e){console.error(e);failOnce();busy(false,'確認');aerr('恢復碼唔啱')}}
 
 /* ---- 重新開始（清除呢部機資料） ---- */
-function wipeView(){showAuth(`<h2>重新開始</h2><p class="amuted" style="color:#b00"><b>⚠ 呢個動作會永久刪除呢部機（呢個瀏覽器）入面所有資料</b>：款式、單據、客戶、工廠、密碼設定，<b>無法復原</b>。</p>
- <p class="amuted">其他電腦 / 手機嘅資料唔會受影響。如果你有加密備份檔，而且記得建立備份嗰陣嘅密碼，之後可以用「由備份檔還原」攞返。</p>
+function wipeView(){showAuth(`<h2>重新開始</h2><p class="amuted" style="color:#b00"><b>⚠ 呢個動作會永久刪除呢部機（呢個瀏覽器）入面所有資料</b>，<b>無法復原</b>。</p>
+ <p class="amuted">其他電腦 / 手機同 Nextcloud 嘅資料唔會受影響。同事部機想重新設定，清除之後揀「由 Nextcloud 載入」就得。</p>
  <form onsubmit="event.preventDefault();doWipe()"><label>請輸入「刪除」兩個字確認</label><input id="awipe" autocomplete="off">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit" style="background:#b00;border-color:#b00">永久刪除並重新開始</button></form>
  <div class="alinks"><a href="javascript:loginView()">← 返回登入</a></div>`)}
 async function doWipe(){if(document.getElementById('awipe').value.trim()!=='刪除')return aerr('請輸入「刪除」兩個字');busy(true,'永久刪除並重新開始');
- try{await idbDel('vault');await idbDel('state');await idbDel('nc');await idbDel('ncstate');failReset();VAULT=null;S=null;DK=null;setupStart(null);toast('已清除，請重新設定密碼')}catch(e){busy(false,'永久刪除並重新開始');aerr('出錯：'+e.message)}}
+ try{for(const k of['vault','state','nc','ncstate','ncbase'])await idbDel(k);failReset();VAULT=null;S=null;GK=null;PK=null;setupStart(null);toast('已清除')}catch(e){busy(false,'永久刪除並重新開始');aerr('出錯：'+e.message)}}
 
 /* ---- 備份檔 ---- */
+const isVault=x=>x&&((x.pw&&x.rc&&x.data)||(x.users&&x.gdata));
 function restoreVaultFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
- if(x.pw&&x.rc&&x.data){if(VAULT&&!confirmReplace())return;VAULT=x;await idbPut('vault',x);loginView('已載入備份檔。請用建立備份嗰陣嘅密碼同手機驗證碼登入。')}
+ if(isVault(x)){if(VAULT&&!window.confirm('還原會取代呢部電腦而家嘅資料，確定？'))return;VAULT=x;await idbPut('vault',x);for(const k of['ncstate','ncbase'])await idbDel(k);loginView('已載入備份檔。請用建立備份嗰陣嘅密碼登入。')}
  else if(x.company&&Array.isArray(x.docs)){if(VAULT)return toast('呢個係舊版未加密備份，請登入之後喺「備份 / 還原」匯入');setupStart(x);toast('已讀取舊版備份，請設定密碼')}
  else toast('檔案格式唔啱')};r.readAsText(f)}
-function confirmReplace(){return window.confirm('還原會取代呢部電腦而家嘅資料，確定？')}
 
 /* ---- 安全設定（登入後） ---- */
-function securityView(){return `<h2>🔒 安全設定</h2>
- <div class="card"><h3>而家嘅保護</h3><ul><li>資料用你嘅密碼加密（AES-256），存喺呢部電腦。</li><li>登入要密碼 + 手機驗證碼。</li><li>閒置 <b>${S.settings.lockMin}</b> 分鐘自動鎖定。</li><li>下載嘅備份檔都係加密嘅。</li></ul>
- <p class="muted">留意：呢個係冇 server 嘅本機保護。密碼加密係主要防線；手機驗證碼係額外一道門，可以擋到一般人，但擋唔到識技術又攞到你部電腦嘅人。所以請用一個夠長、唔會喺其他地方用嘅密碼。</p></div>
+function securityView(){const own=CANP();return `<h2>🔒 安全設定</h2>
+ <div class="card"><h3>而家嘅保護</h3><ul><li>你係：<b>${esc(ME.name)}</b>（${own?'負責人，睇到價錢':'同事，睇唔到價錢'}）</li><li>資料加密（AES-256）。價錢用負責人獨有嘅鎖匙另外加密，同事部機冇呢把鎖匙。</li>${own?'<li>負責人登入要密碼 + 手機驗證碼。</li>':''}<li>閒置 <b>${S.settings.lockMin}</b> 分鐘自動鎖定。</li></ul></div>
  <div class="card"><h3>自動鎖定</h3><div class="bar">閒置 ${sel('settings.lockMin',[[5,'5 分鐘'],[10,'10 分鐘'],[15,'15 分鐘'],[30,'30 分鐘'],[60,'60 分鐘']],{w:140})} 之後自動鎖定</div></div>
- <div class="card"><h3>更改密碼</h3><div class="form">${F('現有密碼','<input type="password" id="s_old">')}${F('新密碼（最少 8 個字）','<input type="password" id="s_new">')}${F('再輸入新密碼','<input type="password" id="s_new2">')}</div><div class="bar" style="margin-top:10px"><button class="pri" onclick="changePw()">更改密碼</button></div></div>
- <div class="card"><h3>換手機 / 重新連接驗證碼</h3><p class="muted">換咗新手機，或者想重新設定 Authenticator 時用。舊手機嘅驗證碼會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="t_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="resetTotp()">重新設定手機驗證碼</button></div><div id="tbox"></div></div>
- <div class="card"><h3>換一組新恢復碼</h3><p class="muted">如果懷疑恢復碼外洩，可以換一組新嘅，舊嗰組會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="r_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="newRC()">產生新恢復碼</button></div><div id="rbox"></div></div>`}
-async function checkPw(pw){try{await unwrapWith(pw,VAULT.pw);return true}catch(e){return false}}
-async function changePw(){const o=document.getElementById('s_old').value,a=document.getElementById('s_new').value,b=document.getElementById('s_new2').value;
- if(a.length<8)return toast('新密碼最少要 8 個字');if(a!==b)return toast('兩次輸入嘅新密碼唔一樣');if(!(await checkPw(o)))return toast('現有密碼唔啱');
- VAULT.pw=await wrapWith(a,DK);await flush();ncMarkDirty();toast('密碼已更改');render()}
+ <div class="card"><h3>更改我嘅密碼</h3><div class="form">${F('現有密碼','<input type="password" id="s_old">')}${F(`新密碼（最少 ${own?8:6} 個字）`,'<input type="password" id="s_new">')}${F('再輸入新密碼','<input type="password" id="s_new2">')}</div><div class="bar" style="margin-top:10px"><button class="pri" onclick="changePw()">更改密碼</button></div></div>
+ ${own?`<div class="card"><h3>換手機 / 重新連接驗證碼</h3><p class="muted">換咗新手機，或者想重新設定 Authenticator 時用。舊手機嘅驗證碼會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="t_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="resetTotp()">重新設定手機驗證碼</button></div><div id="tbox"></div></div>
+ <div class="card"><h3>換一組新恢復碼</h3><p class="muted">如果懷疑恢復碼外洩，可以換一組新嘅，舊嗰組會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="r_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="newRC()">產生新恢復碼</button></div><div id="rbox"></div></div>`:''}`}
+const meU=()=>VAULT.users.find(u=>u.id===ME.id);
+async function checkPw(pw){try{await unwrapWith(pw,meU().w);return true}catch(e){return false}}
+async function changePw(){const o=document.getElementById('s_old').value,a=document.getElementById('s_new').value,b=document.getElementById('s_new2').value;const min=CANP()?8:6;
+ if(a.length<min)return toast(`新密碼最少要 ${min} 個字`);if(a!==b)return toast('兩次輸入嘅新密碼唔一樣');if(!(await checkPw(o)))return toast('現有密碼唔啱');
+ meU().w=await wrapWith(a,CANP()?PK:GK);await flush();ncMarkDirty();toast('密碼已更改');render()}
 async function resetTotp(){if(!(await checkPw(document.getElementById('t_pw').value)))return toast('密碼唔啱');const sec=b32enc(rand(20));
  document.getElementById('tbox').innerHTML=`<div style="margin-top:12px"><p>用手機 Authenticator 掃呢個 QR 碼（或者手動輸入金鑰 <code class="key">${sec.match(/.{4}/g).join(' ')}</code>），然後輸入顯示嘅 6 位數字：</p><div class="qr" style="text-align:left">${qrSvg(otpUri(sec,deviceLabel()))}</div><div class="bar"><input id="t_code" maxlength="6" inputmode="numeric" style="width:140px"><button class="pri" onclick="confirmTotp('${sec}')">確認</button></div></div>`}
 async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};VAULT.label=deviceLabel();await flush();ncMarkDirty();toast('手機驗證碼已更新');render()}
-async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),DK);await flush();ncMarkDirty();
+async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),PK);await flush();ncMarkDirty();
  document.getElementById('rbox').innerHTML=`<p>新恢復碼（舊嗰組已經失效），請即刻抄低：</p><div class="rc">${rc}</div><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${rc}','text/plain')">下載做文字檔</button>`}
+
+/* ---- 用戶管理（只限負責人） ---- */
+function usersView(){if(!CANP())return homeView();const us=VAULT.users;return `<h2>👥 用戶管理</h2>
+ <div class="card"><h3>而家嘅用戶</h3><table class="list"><tr><th>名稱</th><th>角色</th><th></th></tr>${us.map(u=>`<tr><td><b>${esc(u.name)}</b>${u.id===ME.id?' <span class="muted">（你）</span>':''}</td><td>${u.role==='owner'?badge('負責人：睇到價錢，要手機驗證碼','ok'):badge('同事：睇唔到價錢')}</td>
+ <td style="text-align:right;white-space:nowrap">${u.role==='staff'?`<button class="sm" onclick="userRename('${u.id}')">改名</button> <button class="sm" onclick="userResetPw('${u.id}')">重設密碼</button> <button class="sm del" onclick="userDelete('${u.id}')">刪除</button>`:`<button class="sm" onclick="userRename('${u.id}')">改名</button>`}</td></tr>`).join('')}</table></div>
+ <div class="card"><h3>＋ 加同事</h3><p class="muted">同事登入只需要「名稱 + 密碼」。佢可以做價錢以外嘅所有嘢；所有工廠價、客人價、金額、收款都睇唔到，印單亦唔會印出價錢。</p>
+ <div class="form">${F('同事名稱','<input id="u_name" placeholder="例如 Amy" autocomplete="off">')}${F('初始密碼（最少 6 個字）','<input id="u_pw" type="text" autocomplete="off">')}</div>
+ <div class="bar" style="margin-top:10px"><button class="pri" onclick="userAdd()">加入</button><span class="muted">加好之後將名稱同初始密碼話俾同事知，佢登入後可以喺「🔒 安全設定」自己改密碼。</span></div></div>
+ <div class="card"><h3>同事部機點樣開始用</h3><ol>
+ <li>你喺 Nextcloud 幫同事開一個帳戶（或者用佢自己嘅），將「<b>童鞋辦公室</b>」資料夾<b>分享</b>俾佢，權限揀「<b>可以編輯</b>」。</li>
+ <li>同事登入佢嘅 Nextcloud → 個人設定 → 安全性 → 開一個應用程式密碼。</li>
+ <li>同事部機開 <b>https://martin498498.github.io/office/</b> → 揀「<b>☁ 由 Nextcloud 載入</b>」→ 填 Nextcloud 網址、<b>佢自己</b>嘅 Nextcloud 用戶名同應用程式密碼。</li>
+ <li>登入畫面揀佢嘅名稱，輸入你俾佢嘅密碼就得。</li></ol>
+ <p class="muted">同事走咗：喺呢度「刪除」佢，同時喺 Nextcloud 取消分享 / 停用佢嘅帳戶。</p></div>`}
+function nameTaken(n,exceptId){return VAULT.users.some(u=>u.id!==exceptId&&u.name.trim().toLowerCase()===n.trim().toLowerCase())}
+async function userAdd(){const n=document.getElementById('u_name').value.trim(),pw=document.getElementById('u_pw').value;
+ if(!n)return toast('請輸入同事名稱');if(nameTaken(n))return toast('已經有同名嘅用戶');if(pw.length<6)return toast('密碼最少要 6 個字');
+ VAULT.users.push({id:uid(),name:n,role:'staff',w:await wrapWith(pw,GK)});await flush();ncMarkDirty();toast(`已加入 ${n}`);render()}
+function userDialog(title,html,ok){const b=document.getElementById('modalBox');b.innerHTML=`<h3 style="margin-top:0">${title}</h3>${html}<div class="bar" style="justify-content:flex-end;margin:12px 0 0"><button onclick="closeModal()">取消</button><button class="pri" id="mok">確定</button></div>`;document.getElementById('modal').style.display='flex';const i=b.querySelector('input');if(i)i.focus();document.getElementById('mok').onclick=ok}
+function userRename(id){const u=VAULT.users.find(x=>x.id===id);userDialog('改名',`<input id="m_name" value="${esc(u.name)}">`,async()=>{const n=document.getElementById('m_name').value.trim();if(!n)return;if(nameTaken(n,id))return toast('已經有同名嘅用戶');u.name=n;if(id===ME.id)ME.name=n;closeModal();await flush();ncMarkDirty();render()})}
+function userResetPw(id){const u=VAULT.users.find(x=>x.id===id);userDialog(`重設 ${esc(u.name)} 嘅密碼`,`<label class="muted">新密碼（最少 6 個字）</label><input id="m_pw" type="text" autocomplete="off">`,async()=>{const pw=document.getElementById('m_pw').value;if(pw.length<6)return toast('密碼最少要 6 個字');u.w=await wrapWith(pw,GK);closeModal();await flush();ncMarkDirty();toast(`已重設 ${u.name} 嘅密碼`)})}
+function userDelete(id){const u=VAULT.users.find(x=>x.id===id);ask(`確定刪除同事「${esc(u.name)}」？佢之後喺任何一部機都登入唔到（記得喺 Nextcloud 取消分享俾佢）。`,async()=>{VAULT.users=VAULT.users.filter(x=>x.id!==id);await flush();ncMarkDirty();render();toast(`已刪除 ${u.name}`)})}
 
 /* ---- 啟動 ---- */
 async function boot(){if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -844,49 +938,88 @@ async function ncMkcol(c){const r=await ncFetch(c,'MKCOL','');if(!(r.ok||r.statu
 function ncErrMsg(e){return e.code==='auth'?'用戶名或者應用程式密碼唔啱':e.code==='net'?'連唔到 Nextcloud：請檢查網址，同埋有冇做第 1 步「開放權限」（亦可能係 Pi 冇開機 / 冇網絡）':'Nextcloud 回覆錯誤（'+e.message+'）'}
 
 async function ncSaveState(){try{await idbPut('ncstate',NCST)}catch(e){}}
-async function ncSaveCreds(){if(NC&&DK)await idbPut('nc',await encData(DK,NC))}
+async function ncSaveCreds(){if(NC&&GK)await idbPut('nc',await encData(GK,NC))}
+let BASE=null;// 上次同步嘅雲端 vault（用嚟做三方合併）
+async function setBase(v){BASE=v;try{await idbPut('ncbase',v)}catch(e){}}
 async function ncInit(){try{NCST=Object.assign({rev:null,dirty:false,last:0,err:''},await idbGet('ncstate')||{})}catch(e){}
- if(PENDING_NC){NC=PENDING_NC.creds;NCST={rev:PENDING_NC.rev,dirty:false,last:Date.now(),err:''};PENDING_NC=null;await ncSaveCreds();await ncSaveState()}
- else{try{const enc=await idbGet('nc');NC=enc?await decData(DK,enc):null}catch(e){NC=null}}
+ try{BASE=await idbGet('ncbase')}catch(e){BASE=null}
+ if(PENDING_NC){NC=PENDING_NC.creds;NCST={rev:PENDING_NC.rev,dirty:false,last:Date.now(),err:''};await setBase(PENDING_NC.vault);PENDING_NC=null;await ncSaveCreds();await ncSaveState()}
+ else{const enc=await idbGet('nc').catch(()=>null);NC=null;if(enc){for(const k of[GK,PK]){if(!k)continue;try{NC=await decData(k,enc);break}catch(e){}}if(NC)await ncSaveCreds()}}
+ if(VAULT&&VAULT.v===2&&NC&&NCST.rev&&(!BASE||!BASE.users))NCST.dirty=true;// 啱啱由舊版升級：要上傳新格式
  paintSync();if(NC)ncPull()}
 function ncMarkDirty(){if(!NC)return;NCST.dirty=true;ncSaveState();paintSync();clearTimeout(ncPushTimer);ncPushTimer=setTimeout(()=>ncPush(),3000)}
 
+/* ---- 三方合併（以每張單 / 每個款式 / 每個客戶為單位） ---- */
+const jeq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+let MERGE_CONFLICTS=0;
+function mVal(b,l,r){if(jeq(l,r))return l;if(jeq(l,b))return r;if(jeq(r,b))return l;if(l===undefined)return r;if(r===undefined)return l;MERGE_CONFLICTS++;return l}
+function mById(b,l,r){b=b||[];l=l||[];r=r||[];const M=a=>Object.fromEntries(a.map(x=>[x.id,x]));const bm=M(b),lm=M(l),rm=M(r);
+ const ids=[...r.map(x=>x.id),...l.map(x=>x.id).filter(id=>!(id in rm))];const out=[];
+ [...new Set(ids)].forEach(id=>{const v=mVal(bm[id],lm[id],rm[id]);if(v!==undefined)out.push(v)});return out}
+function mMap(b,l,r){b=b||{};l=l||{};r=r||{};const out={};new Set([...Object.keys(r),...Object.keys(l)]).forEach(k=>{const v=mVal(b[k],l[k],r[k]);if(v!==undefined)out[k]=v});return out}
+const G_COLL=['customers','factories','styles','docs'];
+function mTop(b,l,r){b=b||{};const out={};new Set([...Object.keys(r||{}),...Object.keys(l||{})]).forEach(k=>{
+ const v=G_COLL.includes(k)?mById(b[k],l[k],r[k]):mVal(b[k],l[k],r[k]);if(v!==undefined)out[k]=v});return out}
+function mP(b,l,r){b=b||{};return{styles:mMap(b.styles,l.styles,r.styles),docs:mMap(b.docs,l.docs,r.docs),auth:mVal(b.auth,l.auth,r.auth)}}
+async function tryDec(k,d){if(!k||!d)return null;try{return await decData(k,d)}catch(e){return null}}
+// 將雲端版本同本機合併；回傳 {changed: 合併結果同雲端唔同（要上傳）, gotRemote: 有攞到其他人嘅改動}
+async function ncMerge(remote){
+ if(!remote.users){return{changed:true,gotRemote:false}}// 雲端仲係舊格式：直接用新格式覆蓋
+ if(PK){const rgk=await decKey(PK,remote.gk).catch(()=>null);if(!rgk)throw Object.assign(new Error('foreign'),{code:'foreign'});
+  if(await keyRaw(rgk)!==await keyRaw(GK)){
+   if(BASE&&BASE.users)throw Object.assign(new Error('foreign'),{code:'foreign'});
+   GK=rgk;await ncSaveCreds()}}// 呢部機啱啱由舊版升級：跟返雲端（另一部機先升級）嘅一般資料鎖匙
+ const Gr=await tryDec(GK,remote.gdata);if(!Gr)throw Object.assign(new Error('foreign'),{code:'foreign'});
+ const baseOk=BASE&&BASE.users;const Gb=baseOk?await tryDec(GK,BASE.gdata):null;
+ const{G:Gl,P:Pl}=splitData(S);MERGE_CONFLICTS=0;
+ const Gm=mTop(Gb,Gl,Gr);let Pm=null,Pr=null;
+ if(PK){Pr=await decData(PK,remote.pdata);const Pb=baseOk?await tryDec(PK,BASE.pdata):null;Pm=mP(Pb,Pl,Pr)}
+ const Um=mById(baseOk?BASE.users:null,VAULT.users,remote.users);const rc=mVal(baseOk?BASE.rc:undefined,VAULT.rc,remote.rc);const label=mVal(baseOk?BASE.label:undefined,VAULT.label,remote.label);
+ if(!Um.some(u=>u.id===ME.id)){await idbPut('vault',{...remote});VAULT=remote;S=null;GK=null;PK=null;ME=null;loginView('你嘅帳戶已經被負責人移除。');throw Object.assign(new Error('removed'),{code:'removed'})}
+ const gotRemote=!jeq(Gm,Gl)||(PK&&!jeq(Pm,Pl));
+ if(gotRemote){S=PK?mergeData(Gm,Pm):Gm;if(!PK)delete S.auth}
+ const me=Um.find(u=>u.id===ME.id);ME.name=me.name;
+ VAULT={...remote,users:Um,rc,label,gdata:await encData(GK,Gm),pdata:PK?await encData(PK,Pm):remote.pdata};await idbPut('vault',VAULT);
+ const changed=!jeq(Gm,Gr)||(PK&&!jeq(Pm,Pr))||!jeq(Um,remote.users)||!jeq(rc,remote.rc);
+ return{changed,gotRemote}}
+function ncRerender(){const ae=document.activeElement;if(!(ae&&ae.dataset&&ae.dataset.p)&&!document.body.classList.contains('preview'))route()}
+function ncForeign(){NCST.err='雲端資料用咗另一套鎖匙加密（可能另一部機重新開始過）。請去「☁ Nextcloud 同步」處理。';NCST.foreign=true;ncSaveState()}
+
 /* 由雲端拉最新 */
-async function ncPull(){if(!NC||!DK||ncBusy)return;ncBusy=true;paintSync('busy');
+async function ncPull(){if(!NC||!GK||ncBusy)return;ncBusy=true;paintSync('busy');let pushAfter=false,force=false;
  try{const rv=await ncGetJson(NC,'rev.json');
-  if(!rv){ncBusy=false;return ncPush(true)}
-  if(rv.rev===NCST.rev){ncBusy=false;if(NCST.dirty)return ncPush();NCST.err='';NCST.last=Date.now();ncSaveState();return paintSync()}
-  if(NCST.dirty){ncBusy=false;return ncConflict(rv)}
-  await ncTakeRemote();
- }catch(e){NCST.err=ncErrMsg(e);ncSaveState();paintSync()}finally{ncBusy=false;paintSync()}}
-async function ncTakeRemote(){const v=await ncGetJson(NC,'vault.json');if(!v||!v.data)throw Object.assign(new Error('雲端冇資料檔'),{code:'http'});
- let s;try{s=await decData(DK,v.data)}catch(e){NCST.err='雲端資料用咗另一套密碼加密（可能另一部機重新開始過）。請去「☁ Nextcloud 同步」揀用邊個版本。';NCST.foreign=true;ncSaveState();paintSync();return false}
- NCST.foreign=false;await flush();VAULT=v;S=s;S.settings=S.settings||{};S.settings.lockMin=S.settings.lockMin||15;await idbPut('vault',v);
- NCST.rev=v.rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';ncSaveState();
- const ae=document.activeElement;if(!(ae&&ae.dataset&&ae.dataset.p))route();toast('☁ 已載入雲端最新資料');return true}
-/* 推上雲端 */
-async function ncPush(force){if(!NC||!DK)return;if(ncBusy){clearTimeout(ncPushTimer);ncPushTimer=setTimeout(()=>ncPush(force),2000);return}ncBusy=true;paintSync('busy');
- try{const rv=await ncGetJson(NC,'rev.json');
-  if(rv&&rv.rev!==NCST.rev&&!force){ncBusy=false;return ncConflict(rv)}
+  if(!rv){pushAfter=true;force=true}
+  else if(rv.rev===NCST.rev){if(NCST.dirty)pushAfter=true;else{NCST.err='';NCST.last=Date.now();ncSaveState()}}
+  else{const remote=await ncGetJson(NC,'vault.json');await flush();const r=await ncMerge(remote);
+   NCST.rev=rv.rev;await setBase(remote);NCST.foreign=false;NCST.err='';NCST.last=Date.now();
+   if(r.changed){NCST.dirty=true;pushAfter=true}else NCST.dirty=false;ncSaveState();
+   if(r.gotRemote){ncRerender();toast(MERGE_CONFLICTS?`☁ 已同步（${MERGE_CONFLICTS} 項同時被改過，保留咗你呢邊嘅版本）`:'☁ 已同步其他人嘅更新')}}
+ }catch(e){if(e.code==='removed')return;if(e.code==='foreign')ncForeign();else{NCST.err=ncErrMsg(e);ncSaveState()}}
+ finally{ncBusy=false;paintSync()}
+ if(pushAfter&&GK)ncPush(force)}
+/* 推上雲端（如果雲端有新版本，先合併再推） */
+async function ncPush(force){if(!NC||!GK)return;if(ncBusy){clearTimeout(ncPushTimer);ncPushTimer=setTimeout(()=>ncPush(force),2000);return}ncBusy=true;paintSync('busy');
+ try{let rv=await ncGetJson(NC,'rev.json');
+  if(rv&&rv.rev!==NCST.rev&&!force){const remote=await ncGetJson(NC,'vault.json');await flush();const r=await ncMerge(remote);NCST.rev=rv.rev;await setBase(remote);if(r.gotRemote)ncRerender()}
   if(!rv)await ncMkcol(NC);
   await flush();const rev=uid();const v={...VAULT,rev,pushedAt:new Date().toISOString()};
-  await ncPut(NC,'vault.json',v);await ncPut(NC,'rev.json',{rev,savedAt:new Date().toISOString(),by:deviceLabel()});
-  VAULT=v;await idbPut('vault',v);NCST.rev=rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';NCST.foreign=false;ncSaveState();
- }catch(e){NCST.err=ncErrMsg(e);ncSaveState()}finally{ncBusy=false;paintSync()}}
-function ncConflict(rv){const when=rv.savedAt?new Date(rv.savedAt).toLocaleString('zh-HK',{hour12:false}):'—';
- const b=document.getElementById('modalBox');b.innerHTML=`<h3 style="margin-top:0">☁ 兩部機都改咗資料</h3><p>雲端有較新嘅版本（由 <b>${esc(rv.by||'另一部機')}</b> 喺 ${esc(when)} 上載），而呢部機都有未同步嘅改動。請揀保留邊個：</p>
- <div style="display:flex;flex-direction:column;gap:8px"><button class="pri" id="mcl">用雲端版本（放棄呢部機未同步嘅改動）</button><button id="mlo">用呢部機版本（覆蓋雲端）</button><button onclick="closeModal()">稍後再決定</button></div>`;
- document.getElementById('modal').style.display='flex';
- document.getElementById('mcl').onclick=async()=>{closeModal();ncBusy=true;try{NCST.dirty=false;await ncTakeRemote()}catch(e){NCST.err=ncErrMsg(e)}ncBusy=false;paintSync()};
- document.getElementById('mlo').onclick=()=>{closeModal();ncPush(true)};paintSync()}
+  await ncPut(NC,'vault.json',v);await ncPut(NC,'rev.json',{rev,savedAt:new Date().toISOString(),by:(ME?.name||'')+' · '+deviceLabel()});
+  VAULT=v;await idbPut('vault',v);await setBase(v);NCST.rev=rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';NCST.foreign=false;ncSaveState();
+ }catch(e){if(e.code==='removed')return;if(e.code==='foreign')ncForeign();else{NCST.err=ncErrMsg(e);ncSaveState()}}finally{ncBusy=false;paintSync()}}
+// 用雲端版本取代呢部機（要同一套鎖匙）
+async function ncTakeRemote(){const v=await ncGetJson(NC,'vault.json');if(!v||!v.users)throw Object.assign(new Error('雲端冇新格式資料'),{code:'http'});
+ const Gr=await tryDec(GK,v.gdata);if(!Gr){ncForeign();return false}
+ let s=Gr;if(PK){const P=await tryDec(PK,v.pdata);if(!P){ncForeign();return false}s=mergeData(Gr,P)}else delete s.auth;
+ if(!v.users.some(u=>u.id===ME.id)){ncForeign();return false}
+ S=s;VAULT=v;await idbPut('vault',v);await setBase(v);NCST.rev=v.rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';NCST.foreign=false;ncSaveState();ncRerender();toast('☁ 已載入雲端最新資料');return true}
 
 /* 狀態顯示 */
 function syncText(state){if(!NC)return '';if(state==='busy'||ncBusy)return '☁ 同步中…';if(NCST.err)return '⚠ 未同步';if(NCST.dirty)return '☁ 有改動，稍後上傳';
  return '☁ 已同步'+(NCST.last?' '+new Date(NCST.last).toLocaleTimeString('zh-HK',{hour:'2-digit',minute:'2-digit',hour12:false}):'')}
 function paintSync(state){const t=syncText(state);document.querySelectorAll('.syncstat').forEach(e=>{e.textContent=t;e.title=NCST.err||'';e.classList.toggle('bad',!!NCST.err);e.style.display=t?'':'none'})}
-setInterval(()=>{if(DK&&NC&&document.visibilityState==='visible'){if(NCST.dirty||NCST.err)ncPush();else ncPull()}},60000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&DK&&NC&&!NCST.dirty)ncPull()});
-window.addEventListener('online',()=>{if(DK&&NC)ncPull()});
+setInterval(()=>{if(GK&&NC&&document.visibilityState==='visible'){if(NCST.dirty||NCST.err)ncPush();else ncPull()}},60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&GK&&NC&&!NCST.dirty)ncPull()});
+window.addEventListener('online',()=>{if(GK&&NC)ncPull()});
 
 /* 設定頁 */
 function ncView(){const ok=!!NC;return `<h2>☁ Nextcloud 同步</h2>
@@ -894,7 +1027,7 @@ function ncView(){const ok=!!NC;return `<h2>☁ Nextcloud 同步</h2>
  <p>狀態：<b class="syncstat"></b>${NCST.err?`<br><span class="warn">${esc(NCST.err)}</span>`:''}</p>
  <div class="bar"><button class="pri" onclick="ncPull()">立即同步</button><button class="del" onclick="ask('中斷之後，呢部機唔會再同步（資料仍然保留喺呢部機同 Nextcloud）。確定？',ncDisconnect)">中斷連接</button></div>
  ${NCST.foreign?`<div class="warnbox card" style="margin-top:10px">雲端資料用咗另一套密碼加密。<div class="bar" style="margin-top:8px"><button onclick="ask('用呢部機嘅資料覆蓋 Nextcloud？雲端嗰份會被取代。',()=>ncPush(true))">用呢部機資料覆蓋雲端</button></div></div>`:''}</div>
- <div class="card"><h3>點運作</h3><ul><li>每次改完約 3 秒自動上傳；開 App、切返嚟 App、每分鐘都會檢查有冇新資料。</li><li>上傳之前已經用你嘅密碼加密，Nextcloud 入面只係亂碼。</li><li>兩部機同時改咗嘢，會問你保留邊個版本。</li><li>冇網絡時照用，有網絡會自動補上傳。</li></ul></div>`
+ <div class="card"><h3>點運作</h3><ul><li>每次改完約 3 秒自動上傳；開 App、切返嚟 App、每分鐘都會檢查有冇新資料。</li><li>上傳之前已經用你嘅密碼加密，Nextcloud 入面只係亂碼。</li><li>唔同人改唔同張單會自動合併；同一張單同時被改，會保留最後儲存嘅版本。</li><li>冇網絡時照用，有網絡會自動補上傳。</li></ul></div>`
  :`<div class="card"><h3>第 1 步：喺 Nextcloud 開放權限（只做一次）</h3>
  <p><b>方法 A（Raspberry Pi / 自己架設，用 Apache）：</b>喺 Pi 嘅終端機（SSH）貼呢一行，按 Enter，輸入 Pi 嘅密碼：</p>
  <p><code class="key" style="display:block;padding:8px;white-space:pre-wrap">curl -fsSL https://raw.githubusercontent.com/martin498498/office/main/tools/nextcloud-cors.sh | sudo bash</code></p>
@@ -923,14 +1056,14 @@ async function ncConnect(){const m=document.getElementById('nc_msg'),btn=documen
 async function ncDisconnect(){NC=null;NCST={rev:null,dirty:false,last:0,err:''};await idbDel('nc');await idbDel('ncstate');paintSync();render();toast('已中斷 Nextcloud')}
 
 /* 新機：由 Nextcloud 載入（登入之前） */
-function ncLoadView(){showAuth(`<h2>由 Nextcloud 載入</h2><p class="amuted">如果你已經喺另一部機開咗 Nextcloud 同步，喺度填 Nextcloud 資料，就可以攞返全部資料。之後用<b>原本嘅密碼同驗證碼</b>登入。</p>
+function ncLoadView(){showAuth(`<h2>由 Nextcloud 載入</h2><p class="amuted">負責人已經喺另一部機開咗 Nextcloud 同步，喺度填 Nextcloud 資料就可以攞返全部資料。<br><b>同事</b>：用你自己嘅 Nextcloud 帳戶（負責人要先將「童鞋辦公室」資料夾分享俾你）。</p>
  <form onsubmit="event.preventDefault();ncLoadDo()"><label>Nextcloud 網址</label><input id="nc_url" placeholder="https://nas.example.co.uk" autocomplete="off" autocapitalize="off">
  <label>用戶名</label><input id="nc_user" autocomplete="off" autocapitalize="off"><label>應用程式密碼（建議呢部機另外開一個）</label><input id="nc_pass" type="password" autocomplete="off">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">載入</button></form>
  <div class="alinks"><a href="javascript:${VAULT?'loginView()':'setupPw()'}">← 返回</a></div>`)}
 async function ncLoadDo(){let c;try{c=ncFormCreds()}catch(e){return aerr('網址唔啱')}if(!c.user||!c.pass)return aerr('請填用戶名同應用程式密碼');busy(true,'載入');
- try{const v=await ncGetJson(c,'vault.json');if(!v||!v.pw||!v.data){busy(false,'載入');return aerr('Nextcloud 入面未有資料。請先喺已經用緊嘅機度開啟「☁ Nextcloud 同步」。')}
-  VAULT=v;await idbPut('vault',v);await idbDel('state');PENDING_NC={creds:c,rev:v.rev||null};SETUP=null;loginView('已由 Nextcloud 載入。請用原本嘅密碼同驗證碼登入（Authenticator 入面「'+ISSUER+'（'+(v.label||'admin')+'）」）。')}
+ try{const v=await ncGetJson(c,'vault.json');if(!isVault(v)){busy(false,'載入');return aerr('Nextcloud 入面未有資料（或者資料夾未分享俾你）。請負責人先喺佢部機開啟「☁ Nextcloud 同步」。')}
+  VAULT=v;await idbPut('vault',v);await idbDel('state');await idbDel('ncbase');PENDING_NC={creds:c,rev:v.rev||null,vault:v};SETUP=null;loginView('已由 Nextcloud 載入。請揀你嘅名稱，輸入密碼登入。')}
  catch(e){busy(false,'載入');aerr(ncErrMsg(e))}}
 
 boot();
