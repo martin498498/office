@@ -5,6 +5,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/martin498498/office/main/tools/nextcloud-cors.sh | sudo bash
 # 還原：curl -fsSL https://raw.githubusercontent.com/martin498498/office/main/tools/nextcloud-cors.sh | sudo bash -s -- --remove
 set -u
+main(){
 ORIGIN="${OFFICE_ORIGIN:-https://martin498498.github.io}"
 MARK_BEGIN="# BEGIN office-cors (童鞋辦公室)"
 MARK_END="# END office-cors"
@@ -15,7 +16,9 @@ fail(){ say ""; say "❌ $*"; say "   請將上面全部文字截圖俾 Claude�
 [ "$(id -u)" -eq 0 ] || fail "要用 sudo 執行（指令最後要有 | sudo bash）。"
 
 MODE=local; CT=""; NCDIR="${NEXTCLOUD_DIR:-}"
-X(){ if [ "$MODE" = docker ]; then docker exec -i "$CT" "$@"; else "$@"; fi; }
+# 注意：經 curl | bash 執行時，stdin 係程式本身，所以一般指令一律唔讀 stdin（</dev/null）
+X(){ if [ "$MODE" = docker ]; then docker exec "$CT" "$@" </dev/null; else "$@" </dev/null; fi; }
+XI(){ if [ "$MODE" = docker ]; then docker exec -i "$CT" "$@"; else "$@"; fi; }
 
 # 1. 搵 Nextcloud：先搵本機，再搵 Docker 容器
 if [ -z "$NCDIR" ]; then
@@ -24,12 +27,12 @@ if [ -z "$NCDIR" ]; then
   done
 fi
 if [ -z "$NCDIR" ] && command -v docker >/dev/null 2>&1; then
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^nextcloud-aio-nextcloud$'; then
+  if docker ps --format '{{.Names}}' </dev/null 2>/dev/null | grep -q '^nextcloud-aio-nextcloud$'; then
     fail "呢部機用緊 Nextcloud All-in-One，要用另一個方法。"
   fi
-  for c in $(docker ps --format '{{.Names}}' 2>/dev/null); do
+  for c in $(docker ps --format '{{.Names}}' </dev/null 2>/dev/null); do
     for d in /var/www/html /var/www/nextcloud; do
-      if docker exec "$c" test -f "$d/occ" 2>/dev/null && docker exec "$c" test -f "$d/remote.php" 2>/dev/null; then
+      if docker exec "$c" test -f "$d/occ" </dev/null 2>/dev/null && docker exec "$c" test -f "$d/remote.php" </dev/null 2>/dev/null; then
         MODE=docker; CT="$c"; NCDIR="$d"; break 2
       fi
     done
@@ -46,7 +49,7 @@ X test -f "$HT" || fail "搵唔到 $HT"
 
 reload_apache(){
   if [ "$MODE" = docker ]; then
-    if [ "${1:-}" = restart ]; then docker restart "$CT" >/dev/null && say "✓ 已重新啟動容器 $CT"; else X apache2ctl graceful >/dev/null 2>&1 || docker restart "$CT" >/dev/null; fi
+    if [ "${1:-}" = restart ]; then docker restart "$CT" </dev/null >/dev/null && say "✓ 已重新啟動容器 $CT"; else X apache2ctl graceful >/dev/null 2>&1 || docker restart "$CT" </dev/null >/dev/null; fi
   else
     if [ "${1:-}" = restart ]; then systemctl restart apache2 2>/dev/null || apache2ctl restart; else systemctl reload apache2 2>/dev/null || apache2ctl graceful; fi
   fi
@@ -76,7 +79,7 @@ done
 backup
 X sed -i '/^# BEGIN office-cors/,/^# END office-cors/d' "$HT"
 ORE=$(printf '%s' "$ORIGIN" | sed 's/[.]/\\./g')
-cat <<EOF | X sh -c "cat >> '$HT'"
+cat <<EOF | XI sh -c "cat >> '$HT'"
 $MARK_BEGIN
 <IfModule mod_setenvif.c>
   SetEnvIf Origin "^${ORE}\$" OFFICE_CORS=1
@@ -119,3 +122,5 @@ say "   返去系統「☁ Nextcloud 同步」頁，填網址、用戶名、應�
 if [ "$MODE" = docker ]; then
   say "   註：將來更新 Nextcloud Docker 映像之後，如果連唔到，再執行一次呢個指令就得。"
 fi
+}
+main "$@"
