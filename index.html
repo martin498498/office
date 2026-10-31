@@ -727,7 +727,7 @@ function loginView(msg){showAuth(`<h2>登入</h2>
  <label>手機驗證碼（6 位數）</label><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
  <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div>
  <button class="pri" id="abtn" type="submit">登入</button></form>
- <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
+ <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:wipeView()" style="color:#b00">唔記得密碼又冇恢復碼？清除資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
 async function doLogin(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
  const pw=document.getElementById('apw').value,code=document.getElementById('acode').value;if(!pw||!code)return aerr('請輸入密碼同驗證碼');
  busy(true,'登入');aerr('');let dk,s;
@@ -778,6 +778,15 @@ function recoverView(){showAuth(`<h2>用恢復碼登入</h2><p class="amuted">�
 async function doRecover(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
  busy(true,'確認');try{const dk=await unwrapWith(normRC(document.getElementById('arc').value),VAULT.rc);const s=await decData(dk,VAULT.data);failReset();SETUP={mode:'recover',dk,s};setupPw()}
  catch(e){failOnce();busy(false,'確認');aerr('恢復碼唔啱')}}
+
+/* ---- 重新開始（清除呢部機資料） ---- */
+function wipeView(){showAuth(`<h2>重新開始</h2><p class="amuted" style="color:#b00"><b>⚠ 呢個動作會永久刪除呢部機（呢個瀏覽器）入面所有資料</b>：款式、單據、客戶、工廠、密碼設定，<b>無法復原</b>。</p>
+ <p class="amuted">其他電腦 / 手機嘅資料唔會受影響。如果你有加密備份檔，而且記得建立備份嗰陣嘅密碼，之後可以用「由備份檔還原」攞返。</p>
+ <form onsubmit="event.preventDefault();doWipe()"><label>請輸入「刪除」兩個字確認</label><input id="awipe" autocomplete="off">
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit" style="background:#b00;border-color:#b00">永久刪除並重新開始</button></form>
+ <div class="alinks"><a href="javascript:loginView()">← 返回登入</a></div>`)}
+async function doWipe(){if(document.getElementById('awipe').value.trim()!=='刪除')return aerr('請輸入「刪除」兩個字');busy(true,'永久刪除並重新開始');
+ try{await idbDel('vault');await idbDel('state');failReset();VAULT=null;S=null;DK=null;setupStart(null);toast('已清除，請重新設定密碼')}catch(e){busy(false,'永久刪除並重新開始');aerr('出錯：'+e.message)}}
 
 /* ---- 備份檔 ---- */
 function restoreVaultFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
