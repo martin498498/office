@@ -2,7 +2,15 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="童鞋辦公室">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>童鞋貿易辦公室系統</title>
 <style>
 :root{--navy:#1f3864;--sub:#d9e1f2;--inp:#fff9d9;--line:#c8ccd4;--muted:#6b7280;--bg:#f4f6fa;--ok:#2e7d32;--warn:#c00000}
@@ -94,7 +102,7 @@ table.grid tr.tot td{background:#ededed;font-weight:bold}
 #pvbar{display:none;position:fixed;top:0;left:0;right:0;background:var(--navy);padding:10px;gap:8px;justify-content:center;z-index:5}
 body.preview #pvbar{display:flex}
 @media print{#pvbar{display:none!important}}
-@media(max-width:800px){#app{flex-direction:column}nav{width:auto;height:auto;position:static}nav a{display:inline-block}nav .grp{display:none}}
+
 
 a{color:#1f3864}
 .btn{display:inline-block;font:inherit;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:6px 12px;border-radius:4px;cursor:pointer;text-decoration:none}
@@ -153,11 +161,47 @@ nav a.lockbtn{margin:0 16px 6px;border:1px solid rgba(255,255,255,.4);border-rad
 .chip:hover{border-color:var(--navy)}
 .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .chip.sel{cursor:default;margin-right:4px}.chip.sel i{font-style:normal;cursor:pointer;opacity:.8;padding-left:2px}.chip.sel i:hover{opacity:1}
+
+#topbar,#navShade{display:none}
+@media screen and (max-width:800px){
+  #app{display:block}
+  #topbar{display:flex;position:fixed;top:0;left:0;right:0;z-index:20;background:var(--navy);color:#fff;align-items:center;gap:6px;padding:env(safe-area-inset-top) 8px 0;height:calc(50px + env(safe-area-inset-top))}
+  #topbar button,#topbar a{background:none;border:none;color:#fff;font-size:22px;padding:6px 10px;text-decoration:none}
+  #tbTitle{flex:1;font-weight:bold;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  nav{position:fixed;left:0;top:0;bottom:0;width:260px;height:100%;z-index:30;transform:translateX(-105%);transition:transform .2s;padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:env(safe-area-inset-bottom)}
+  body.navopen nav{transform:none}
+  body.navopen #navShade{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25}
+  nav a{padding:10px 16px;font-size:15px}
+  main{padding:calc(62px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom))}
+  h2{font-size:18px}
+  input,select,textarea{font-size:16px}
+  .form{grid-template-columns:1fr 1fr;gap:8px 10px}.form .w2{grid-column:1/-1}
+  .card{padding:12px}
+  .bar button,.bar .btn{padding:8px 12px}
+  button.sm{padding:5px 10px;font-size:13px}
+  main table.list{display:block;overflow-x:auto;white-space:nowrap}
+  .fstep{width:calc(50% - 20px)}.flow .arr{display:none}
+  .kpi{flex:1 1 40%;min-width:0}
+  .two-col{grid-template-columns:1fr}
+  .mhead{flex-wrap:wrap}
+  .plh{gap:8px}
+  .scard{padding:8px}.simg{width:72px;height:72px}
+  #pvbar{padding-top:calc(10px + env(safe-area-inset-top))}
+  body.preview #printArea{padding:calc(64px + env(safe-area-inset-top)) 6px 30px;overflow-x:hidden}
+  .toast{bottom:calc(20px + env(safe-area-inset-bottom));right:12px;left:12px;text-align:center}
+  #auth{padding-top:calc(24px + env(safe-area-inset-top))}
+}
+@media screen and (max-width:480px){.form{grid-template-columns:1fr}.fstep{width:100%}}
+@media print{.doc{zoom:1!important}}
+#auth{z-index:40!important}
+body.preview #topbar{display:none!important}
 </style>
 </head>
 <body>
 <div id="pvbar"><button class="pri" onclick="window.print()">🖨 列印 / 存 PDF</button><button onclick="closePreview()">✕ 返回編輯</button></div>
 <div id="auth"></div>
+<div id="topbar"><button onclick="toggleNav(true)" aria-label="選單">☰</button><span id="tbTitle">童鞋辦公室</span><a href="javascript:lockNow()" aria-label="鎖定">🔒</a></div>
+<div id="navShade" onclick="toggleNav(false)"></div>
 <div id="app" style="display:none"><nav id="nav"></nav><main id="main"></main></div>
 <div id="printArea"></div>
 <div id="modal"><div class="box" id="modalBox"></div></div>
@@ -301,7 +345,7 @@ function go(v,id){location.hash=v+(id?'-'+id:'')}
 window.addEventListener('hashchange',route);
 function route(){if(!S)return;const h=decodeURIComponent(location.hash.slice(1));const i=h.indexOf('-');const v=i<0?h:h.slice(0,i),id=i<0?null:h.slice(i+1);
  view=NAV.some(n=>n[0]===v)?v:'home';editing=id;closePreview(true);render();window.scrollTo(0,0)}
-function render(){CALC={};D=null;
+function render(){CALC={};D=null;document.body.classList.remove('navopen');const tb=document.getElementById('tbTitle');if(tb)tb.textContent=(NAV.find(n=>n[0]===view)||[0,'首頁'])[1].replace(/^[^\w\u4e00-\u9fff①-⑦]+/,'');
  document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a>'+NAV.map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
  const m=document.getElementById('main');let h;
  if(view==='STY')h=editing?styleEditor():styleList();
@@ -529,7 +573,9 @@ function backupView(){return `<h2>備份 / 還原</h2><div class="card"><b>⚠ �
  <p class="muted">喺另一部電腦用：開返呢個網頁 → 登入畫面揀「由備份檔還原」→ 揀備份檔 → 用你嘅密碼同手機驗證碼登入。</p></div>
  <div class="card"><b>匯出 Excel (CSV)</b><p class="muted">⚠ CSV 檔冇加密，請小心保管。</p><div class="bar" style="margin-top:8px"><button onclick="exportCSV()">⬇ 訂單明細 CSV</button></div></div>
  <div class="card"><b>重設</b><p class="muted">清走所有業務資料，返回範例資料（密碼同手機驗證碼保持不變）。建議先下載備份。</p><button class="del" onclick="ask('確定清走所有資料？',()=>{S={...seed(),auth:S.auth,settings:S.settings};save();go('home')})">清走所有資料</button></div>`}
-function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function download(name,text,type){const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ if(ios&&navigator.canShare){try{const f=new File([text],name,{type});if(navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(()=>{});return}}catch(e){}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 async function exportJSON(){S.lastBackup=today();await flush();download(`辦公室系統備份-加密-${today()}.json`,JSON.stringify(VAULT),'application/json');render()}
 function importJSON(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
  if(x.pw&&x.rc&&x.data)ask('還原會取代而家所有資料。還原之後要用<b>建立備份嗰陣嘅密碼同手機驗證碼</b>登入。確定？',async()=>{await flush();DK=null;S=null;VAULT=x;await idbPut('vault',x);loginView('已還原備份。請用備份嘅密碼同驗證碼登入。')});
@@ -614,7 +660,10 @@ function preview(id){const d=docById(id);const land=d.type==='PL'&&d.lines.some(
  document.getElementById('printArea').innerHTML=`<div class="doc ${land?'land':''}">${docHTML(d)}</div>`;
  let st=document.getElementById('pgsz');if(!st){st=document.createElement('style');st.id='pgsz';document.head.appendChild(st)}
  st.textContent=`@media print{@page{size:A4 ${land?'landscape':'portrait'};margin:0}}`;
- document.title=d.no+(d.custPO?' '+d.custPO:'');document.body.classList.add('preview');window.scrollTo(0,0)}
+ document.title=d.no+(d.custPO?' '+d.custPO:'');document.body.classList.add('preview');fitDoc();window.scrollTo(0,0)}
+function fitDoc(){const e=document.querySelector('#printArea .doc');if(!e)return;e.style.zoom='';const w=e.offsetWidth,avail=Math.min(window.innerWidth,screen.width||1e9,document.getElementById('printArea').clientWidth||1e9)-12;e.style.zoom=w>avail?(avail/w).toFixed(3):''}
+window.addEventListener('resize',()=>{if(document.body.classList.contains('preview'))fitDoc()});
+function toggleNav(on){document.body.classList.toggle('navopen',on)}
 function closePreview(silent){document.body.classList.remove('preview');document.title='童鞋貿易辦公室系統'}
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('preview'))closePreview()});
 
@@ -756,7 +805,8 @@ async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)
  document.getElementById('rbox').innerHTML=`<p>新恢復碼（舊嗰組已經失效），請即刻抄低：</p><div class="rc">${rc}</div><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${rc}','text/plain')">下載做文字檔</button>`}
 
 /* ---- 啟動 ---- */
-async function boot(){if(!window.crypto||!crypto.subtle){showAuth('<p class="aerr" style="display:block">呢個瀏覽器唔支援加密功能。請用最新版 Chrome / Edge / Safari，並經 https:// 網址或者直接開檔案使用。</p>');return}
+async function boot(){if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+ if(!window.crypto||!crypto.subtle){showAuth('<p class="aerr" style="display:block">呢個瀏覽器唔支援加密功能。請用最新版 Chrome / Edge / Safari，並經 https:// 網址或者直接開檔案使用。</p>');return}
  try{VAULT=await idbGet('vault')}catch(e){VAULT=null}
  if(VAULT)loginView();else{let plain=null;try{plain=await idbGet('state')}catch(e){}setupStart(plain&&plain.company&&plain.styles?plain:null)}}
 
