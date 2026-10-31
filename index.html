@@ -195,12 +195,17 @@ nav a.lockbtn{margin:0 16px 6px;border:1px solid rgba(255,255,255,.4);border-rad
 @media print{.doc{zoom:1!important}}
 #auth{z-index:40!important}
 body.preview #topbar{display:none!important}
+
+nav a.syncstat{display:block;margin:0 16px 8px;font-size:12px;color:#cfe0ff;padding:2px 0;text-decoration:none}
+nav a.syncstat.bad{color:#ffb4b4}
+#topbar a.syncstat{font-size:12px;padding:4px 6px;white-space:nowrap}
+#topbar a.syncstat.bad{color:#ffb4b4}
 </style>
 </head>
 <body>
 <div id="pvbar"><button class="pri" onclick="window.print()">🖨 列印 / 存 PDF</button><button onclick="closePreview()">✕ 返回編輯</button></div>
 <div id="auth"></div>
-<div id="topbar"><button onclick="toggleNav(true)" aria-label="選單">☰</button><span id="tbTitle">童鞋辦公室</span><a href="javascript:lockNow()" aria-label="鎖定">🔒</a></div>
+<div id="topbar"><button onclick="toggleNav(true)" aria-label="選單">☰</button><span id="tbTitle">童鞋辦公室</span><a class="syncstat" href="#cloud" style="display:none"></a><a href="javascript:lockNow()" aria-label="鎖定">🔒</a></div>
 <div id="navShade" onclick="toggleNav(false)"></div>
 <div id="app" style="display:none"><nav id="nav"></nav><main id="main"></main></div>
 <div id="printArea"></div>
@@ -339,19 +344,19 @@ const NAV=[['home','🏠 首頁'],['grp','主流程'],['STY','① 開發款式']
  ['grp','追蹤'],['tsample','樣板追蹤'],['tprod','生產追蹤'],['tpay','收款'],
  ['grp','可選'],['PI','PI / SC'],
  ['grp','資料'],['customers','客戶'],['factories','工廠'],['company','公司資料'],['settings','追蹤階段設定'],
- ['grp','系統'],['backup','備份 / 還原'],['security','🔒 安全設定'],['help','使用說明']];
+ ['grp','系統'],['cloud','☁ Nextcloud 同步'],['backup','備份 / 還原'],['security','🔒 安全設定'],['help','使用說明']];
 let view='home',editing=null,D=null;
 function go(v,id){location.hash=v+(id?'-'+id:'')}
 window.addEventListener('hashchange',route);
 function route(){if(!S)return;const h=decodeURIComponent(location.hash.slice(1));const i=h.indexOf('-');const v=i<0?h:h.slice(0,i),id=i<0?null:h.slice(i+1);
  view=NAV.some(n=>n[0]===v)?v:'home';editing=id;closePreview(true);render();window.scrollTo(0,0)}
 function render(){CALC={};D=null;document.body.classList.remove('navopen');const tb=document.getElementById('tbTitle');if(tb)tb.textContent=(NAV.find(n=>n[0]===view)||[0,'首頁'])[1].replace(/^[^\w\u4e00-\u9fff①-⑦]+/,'');
- document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a>'+NAV.map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
+ document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a><a class="syncstat" href="#cloud"></a>'+NAV.map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
  const m=document.getElementById('main');let h;
  if(view==='STY')h=editing?styleEditor():styleList();
  else if(T[view])h=editing?docEditor():docList(view);
- else h=({home:homeView,tsample:sampleTrack,tprod:prodTrack,tpay:payTrack,customers:()=>masterView('customers'),factories:()=>masterView('factories'),company:companyView,settings:settingsView,backup:backupView,security:securityView,help:helpView}[view]||homeView)();
- m.innerHTML=h}
+ else h=({home:homeView,tsample:sampleTrack,tprod:prodTrack,tpay:payTrack,customers:()=>masterView('customers'),factories:()=>masterView('factories'),company:companyView,settings:settingsView,backup:backupView,cloud:ncView,security:securityView,help:helpView}[view]||homeView)();
+ m.innerHTML=h;if(typeof paintSync==='function')paintSync()}
 
 /* =================== ① 開發款式 =================== */
 function styleList(){const q=(styleList.q||'').toLowerCase();
@@ -705,7 +710,7 @@ const normRC=s=>String(s||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
 
 /* ---- 狀態 ---- */
 let S=null,DK=null,VAULT=null,saveChain=Promise.resolve(),saveTimer=null;
-function save(){if(!DK)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,300)}
+function save(){if(!DK)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,300);ncMarkDirty()}
 function flush(){clearTimeout(saveTimer);if(!DK||!S)return saveChain;const dk=DK,snap=S;
  saveChain=saveChain.then(async()=>{snap.savedAt=new Date().toISOString();VAULT.data=await encData(dk,snap);await idbPut('vault',VAULT)}).catch(e=>{console.error(e);toast('⚠ 儲存失敗，請即刻備份')});return saveChain}
 window.addEventListener('beforeunload',()=>{if(DK)flush()});
@@ -728,7 +733,7 @@ function loginView(msg){showAuth(`<h2>登入</h2>
  <label>手機驗證碼（6 位數）</label><div class="amuted" style="margin:-2px 0 4px">用 Authenticator 入面「${ISSUER}（${esc(VAULT?.label||'admin')}）」嗰組數字</div><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
  <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div>
  <button class="pri" id="abtn" type="submit">登入</button></form>
- <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:wipeView()" style="color:#b00">唔記得密碼又冇恢復碼？清除資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
+ <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:ncLoadView()">☁ 由 Nextcloud 載入</a><a href="javascript:wipeView()" style="color:#b00">唔記得密碼又冇恢復碼？清除資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
 async function doLogin(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
  const pw=document.getElementById('apw').value,code=document.getElementById('acode').value;if(!pw||!code)return aerr('請輸入密碼同驗證碼');
  busy(true,'登入');aerr('');let dk,s;
@@ -736,8 +741,8 @@ async function doLogin(){const t=throttle();if(t.until>Date.now())return aerr(`�
  if(!(await verifyTotp(s.auth?.totp,code))){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤（驗證碼每 30 秒轉一次，請用最新嗰個）')}
  failReset();enterApp(dk,s)}
 function enterApp(dk,s){DK=dk;S=s;S.settings=S.settings||{};S.settings.sampleStages=S.settings.sampleStages||[...DEF_SAMPLE_STAGES];S.settings.prodStages=S.settings.prodStages||[...DEF_PROD_STAGES];S.settings.lockMin=S.settings.lockMin||15;
- lastAct=Date.now();hideAuth();route()}
-async function lockNow(msg){if(DK)await flush();S=null;DK=null;D=null;document.getElementById('main').innerHTML='';loginView(msg||'')}
+ lastAct=Date.now();hideAuth();route();ncInit()}
+async function lockNow(msg){if(DK)await flush();if(NC&&NCST.dirty){try{await ncPush()}catch(e){}}S=null;DK=null;NC=null;D=null;document.getElementById('main').innerHTML='';loginView(msg||'')}
 
 /* 閒置自動鎖 */
 let lastAct=Date.now();['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>window.addEventListener(ev,()=>{lastAct=Date.now()},{passive:true}));
@@ -750,7 +755,7 @@ function setupPw(){showAuth(`<h2>${SETUP.mode==='recover'?'設定新密碼':'第
  <p class="amuted">資料會用呢個密碼加密，存喺呢部電腦。最少 8 個字，建議用一句容易記嘅句子。</p>
  <form onsubmit="event.preventDefault();setupPw2()"><label>密碼</label><input type="password" id="apw" autocomplete="new-password"><label>再輸入一次</label><input type="password" id="apw2" autocomplete="new-password">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">下一步</button></form>
- ${SETUP.mode==='new'?`<div class="alinks"><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`:''}`)}
+ ${SETUP.mode==='new'?`<div class="alinks"><a href="javascript:ncLoadView()">☁ 已經喺其他機用 Nextcloud 同步？由 Nextcloud 載入</a><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`:''}`)}
 function setupPw2(){const a=document.getElementById('apw').value,b=document.getElementById('apw2').value;if(a.length<8)return aerr('密碼最少要 8 個字');if(a!==b)return aerr('兩次輸入嘅密碼唔一樣');SETUP.pw=a;SETUP.totp=b32enc(rand(20));setupTotp()}
 function setupTotp(){const uri=otpUri(SETUP.totp,deviceLabel());showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
  <ol class="amuted" style="text-align:left;padding-left:18px"><li>喺手機安裝 <b>Google Authenticator</b> 或者 <b>Microsoft Authenticator</b>（免費）。</li><li>喺 App 入面揀「＋」→「掃描 QR 碼」，掃下面個 QR 碼。</li><li>將 App 顯示嘅 6 位數字輸入落下面。</li></ol>
@@ -787,7 +792,7 @@ function wipeView(){showAuth(`<h2>重新開始</h2><p class="amuted" style="colo
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit" style="background:#b00;border-color:#b00">永久刪除並重新開始</button></form>
  <div class="alinks"><a href="javascript:loginView()">← 返回登入</a></div>`)}
 async function doWipe(){if(document.getElementById('awipe').value.trim()!=='刪除')return aerr('請輸入「刪除」兩個字');busy(true,'永久刪除並重新開始');
- try{await idbDel('vault');await idbDel('state');failReset();VAULT=null;S=null;DK=null;setupStart(null);toast('已清除，請重新設定密碼')}catch(e){busy(false,'永久刪除並重新開始');aerr('出錯：'+e.message)}}
+ try{await idbDel('vault');await idbDel('state');await idbDel('nc');await idbDel('ncstate');failReset();VAULT=null;S=null;DK=null;setupStart(null);toast('已清除，請重新設定密碼')}catch(e){busy(false,'永久刪除並重新開始');aerr('出錯：'+e.message)}}
 
 /* ---- 備份檔 ---- */
 function restoreVaultFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
@@ -807,11 +812,11 @@ function securityView(){return `<h2>🔒 安全設定</h2>
 async function checkPw(pw){try{await unwrapWith(pw,VAULT.pw);return true}catch(e){return false}}
 async function changePw(){const o=document.getElementById('s_old').value,a=document.getElementById('s_new').value,b=document.getElementById('s_new2').value;
  if(a.length<8)return toast('新密碼最少要 8 個字');if(a!==b)return toast('兩次輸入嘅新密碼唔一樣');if(!(await checkPw(o)))return toast('現有密碼唔啱');
- VAULT.pw=await wrapWith(a,DK);await flush();toast('密碼已更改');render()}
+ VAULT.pw=await wrapWith(a,DK);await flush();ncMarkDirty();toast('密碼已更改');render()}
 async function resetTotp(){if(!(await checkPw(document.getElementById('t_pw').value)))return toast('密碼唔啱');const sec=b32enc(rand(20));
  document.getElementById('tbox').innerHTML=`<div style="margin-top:12px"><p>用手機 Authenticator 掃呢個 QR 碼（或者手動輸入金鑰 <code class="key">${sec.match(/.{4}/g).join(' ')}</code>），然後輸入顯示嘅 6 位數字：</p><div class="qr" style="text-align:left">${qrSvg(otpUri(sec,deviceLabel()))}</div><div class="bar"><input id="t_code" maxlength="6" inputmode="numeric" style="width:140px"><button class="pri" onclick="confirmTotp('${sec}')">確認</button></div></div>`}
-async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};VAULT.label=deviceLabel();await flush();toast('手機驗證碼已更新');render()}
-async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),DK);await flush();
+async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};VAULT.label=deviceLabel();await flush();ncMarkDirty();toast('手機驗證碼已更新');render()}
+async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),DK);await flush();ncMarkDirty();
  document.getElementById('rbox').innerHTML=`<p>新恢復碼（舊嗰組已經失效），請即刻抄低：</p><div class="rc">${rc}</div><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${rc}','text/plain')">下載做文字檔</button>`}
 
 /* ---- 啟動 ---- */
@@ -819,6 +824,114 @@ async function boot(){if('serviceWorker' in navigator&&/^https?:$/.test(location
  if(!window.crypto||!crypto.subtle){showAuth('<p class="aerr" style="display:block">呢個瀏覽器唔支援加密功能。請用最新版 Chrome / Edge / Safari，並經 https:// 網址或者直接開檔案使用。</p>');return}
  try{VAULT=await idbGet('vault')}catch(e){VAULT=null}
  if(VAULT)loginView();else{let plain=null;try{plain=await idbGet('state')}catch(e){}setupStart(plain&&plain.company&&plain.styles?plain:null)}}
+
+/* =================== Nextcloud 同步（WebDAV，資料先加密先上傳） =================== */
+const NC_FOLDER='童鞋辦公室';
+let NC=null;                 // {url,user,pass}：登入後先解密放喺記憶體
+let NCST={rev:null,dirty:false,last:0,err:''};
+let PENDING_NC=null,ncBusy=false,ncPushTimer=null;
+const b64u=s=>btoa(unescape(encodeURIComponent(s)));
+function ncNormUrl(u){u=String(u||'').trim();if(!/^https?:\/\//i.test(u))u='https://'+u;const x=new URL(u);
+ const path=x.pathname.split(/\/(?:index\.php|apps|remote\.php|login|settings)(?:\/|$)/)[0].replace(/\/+$/,'');return x.origin+path}
+function ncUrl(c,name){return `${c.url}/remote.php/dav/files/${encodeURIComponent(c.user)}/${encodeURIComponent(NC_FOLDER)}${name?'/'+name:''}`}
+async function ncFetch(c,method,name,body){let r;
+ try{r=await fetch(ncUrl(c,name),{method,cache:'no-store',headers:{'Authorization':'Basic '+b64u(c.user+':'+c.pass),...(body!=null?{'Content-Type':'application/json'}:{})},body})}
+ catch(e){const er=new Error('net');er.code='net';throw er}
+ if(r.status===401||r.status===403){const er=new Error('auth');er.code='auth';throw er}return r}
+async function ncGetJson(c,name){const r=await ncFetch(c,'GET',name);if(r.status===404)return null;if(!r.ok){const e=new Error('HTTP '+r.status);e.code='http';throw e}return r.json()}
+async function ncPut(c,name,obj){const r=await ncFetch(c,'PUT',name,JSON.stringify(obj));if(!r.ok){const e=new Error('HTTP '+r.status);e.code='http';throw e}}
+async function ncMkcol(c){const r=await ncFetch(c,'MKCOL','');if(!(r.ok||r.status===405)){const e=new Error('HTTP '+r.status);e.code='http';throw e}}
+function ncErrMsg(e){return e.code==='auth'?'用戶名或者應用程式密碼唔啱':e.code==='net'?'連唔到 Nextcloud：請檢查網址，同埋 WebAppPassword 有冇加入 https://martin498498.github.io（亦可能係 NAS 冇開機 / 冇網絡）':'Nextcloud 回覆錯誤（'+e.message+'）'}
+
+async function ncSaveState(){try{await idbPut('ncstate',NCST)}catch(e){}}
+async function ncSaveCreds(){if(NC&&DK)await idbPut('nc',await encData(DK,NC))}
+async function ncInit(){try{NCST=Object.assign({rev:null,dirty:false,last:0,err:''},await idbGet('ncstate')||{})}catch(e){}
+ if(PENDING_NC){NC=PENDING_NC.creds;NCST={rev:PENDING_NC.rev,dirty:false,last:Date.now(),err:''};PENDING_NC=null;await ncSaveCreds();await ncSaveState()}
+ else{try{const enc=await idbGet('nc');NC=enc?await decData(DK,enc):null}catch(e){NC=null}}
+ paintSync();if(NC)ncPull()}
+function ncMarkDirty(){if(!NC)return;NCST.dirty=true;ncSaveState();paintSync();clearTimeout(ncPushTimer);ncPushTimer=setTimeout(()=>ncPush(),3000)}
+
+/* 由雲端拉最新 */
+async function ncPull(){if(!NC||!DK||ncBusy)return;ncBusy=true;paintSync('busy');
+ try{const rv=await ncGetJson(NC,'rev.json');
+  if(!rv){ncBusy=false;return ncPush(true)}
+  if(rv.rev===NCST.rev){ncBusy=false;if(NCST.dirty)return ncPush();NCST.err='';NCST.last=Date.now();ncSaveState();return paintSync()}
+  if(NCST.dirty){ncBusy=false;return ncConflict(rv)}
+  await ncTakeRemote();
+ }catch(e){NCST.err=ncErrMsg(e);ncSaveState();paintSync()}finally{ncBusy=false;paintSync()}}
+async function ncTakeRemote(){const v=await ncGetJson(NC,'vault.json');if(!v||!v.data)throw Object.assign(new Error('雲端冇資料檔'),{code:'http'});
+ let s;try{s=await decData(DK,v.data)}catch(e){NCST.err='雲端資料用咗另一套密碼加密（可能另一部機重新開始過）。請去「☁ Nextcloud 同步」揀用邊個版本。';NCST.foreign=true;ncSaveState();paintSync();return false}
+ NCST.foreign=false;await flush();VAULT=v;S=s;S.settings=S.settings||{};S.settings.lockMin=S.settings.lockMin||15;await idbPut('vault',v);
+ NCST.rev=v.rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';ncSaveState();
+ const ae=document.activeElement;if(!(ae&&ae.dataset&&ae.dataset.p))route();toast('☁ 已載入雲端最新資料');return true}
+/* 推上雲端 */
+async function ncPush(force){if(!NC||!DK)return;if(ncBusy){clearTimeout(ncPushTimer);ncPushTimer=setTimeout(()=>ncPush(force),2000);return}ncBusy=true;paintSync('busy');
+ try{const rv=await ncGetJson(NC,'rev.json');
+  if(rv&&rv.rev!==NCST.rev&&!force){ncBusy=false;return ncConflict(rv)}
+  if(!rv)await ncMkcol(NC);
+  await flush();const rev=uid();const v={...VAULT,rev,pushedAt:new Date().toISOString()};
+  await ncPut(NC,'vault.json',v);await ncPut(NC,'rev.json',{rev,savedAt:new Date().toISOString(),by:deviceLabel()});
+  VAULT=v;await idbPut('vault',v);NCST.rev=rev;NCST.dirty=false;NCST.last=Date.now();NCST.err='';NCST.foreign=false;ncSaveState();
+ }catch(e){NCST.err=ncErrMsg(e);ncSaveState()}finally{ncBusy=false;paintSync()}}
+function ncConflict(rv){const when=rv.savedAt?new Date(rv.savedAt).toLocaleString('zh-HK',{hour12:false}):'—';
+ const b=document.getElementById('modalBox');b.innerHTML=`<h3 style="margin-top:0">☁ 兩部機都改咗資料</h3><p>雲端有較新嘅版本（由 <b>${esc(rv.by||'另一部機')}</b> 喺 ${esc(when)} 上載），而呢部機都有未同步嘅改動。請揀保留邊個：</p>
+ <div style="display:flex;flex-direction:column;gap:8px"><button class="pri" id="mcl">用雲端版本（放棄呢部機未同步嘅改動）</button><button id="mlo">用呢部機版本（覆蓋雲端）</button><button onclick="closeModal()">稍後再決定</button></div>`;
+ document.getElementById('modal').style.display='flex';
+ document.getElementById('mcl').onclick=async()=>{closeModal();ncBusy=true;try{NCST.dirty=false;await ncTakeRemote()}catch(e){NCST.err=ncErrMsg(e)}ncBusy=false;paintSync()};
+ document.getElementById('mlo').onclick=()=>{closeModal();ncPush(true)};paintSync()}
+
+/* 狀態顯示 */
+function syncText(state){if(!NC)return '';if(state==='busy'||ncBusy)return '☁ 同步中…';if(NCST.err)return '⚠ 未同步';if(NCST.dirty)return '☁ 有改動，稍後上傳';
+ return '☁ 已同步'+(NCST.last?' '+new Date(NCST.last).toLocaleTimeString('zh-HK',{hour:'2-digit',minute:'2-digit',hour12:false}):'')}
+function paintSync(state){const t=syncText(state);document.querySelectorAll('.syncstat').forEach(e=>{e.textContent=t;e.title=NCST.err||'';e.classList.toggle('bad',!!NCST.err);e.style.display=t?'':'none'})}
+setInterval(()=>{if(DK&&NC&&document.visibilityState==='visible'){if(NCST.dirty||NCST.err)ncPush();else ncPull()}},60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&DK&&NC&&!NCST.dirty)ncPull()});
+window.addEventListener('online',()=>{if(DK&&NC)ncPull()});
+
+/* 設定頁 */
+function ncView(){const ok=!!NC;return `<h2>☁ Nextcloud 同步</h2>
+ ${ok?`<div class="card"><h3>已連接</h3><p>Nextcloud：<b>${esc(NC.url)}</b><br>用戶：<b>${esc(NC.user)}</b><br>資料夾：<b>${NC_FOLDER}/</b></p>
+ <p>狀態：<b class="syncstat"></b>${NCST.err?`<br><span class="warn">${esc(NCST.err)}</span>`:''}</p>
+ <div class="bar"><button class="pri" onclick="ncPull()">立即同步</button><button class="del" onclick="ask('中斷之後，呢部機唔會再同步（資料仍然保留喺呢部機同 Nextcloud）。確定？',ncDisconnect)">中斷連接</button></div>
+ ${NCST.foreign?`<div class="warnbox card" style="margin-top:10px">雲端資料用咗另一套密碼加密。<div class="bar" style="margin-top:8px"><button onclick="ask('用呢部機嘅資料覆蓋 Nextcloud？雲端嗰份會被取代。',()=>ncPush(true))">用呢部機資料覆蓋雲端</button></div></div>`:''}</div>
+ <div class="card"><h3>點運作</h3><ul><li>每次改完約 3 秒自動上傳；開 App、切返嚟 App、每分鐘都會檢查有冇新資料。</li><li>上傳之前已經用你嘅密碼加密，Nextcloud 入面只係亂碼。</li><li>兩部機同時改咗嘢，會問你保留邊個版本。</li><li>冇網絡時照用，有網絡會自動補上傳。</li></ul></div>`
+ :`<div class="card"><h3>第 1 步：喺 Nextcloud 開放權限（只做一次，要管理員）</h3><ol>
+ <li>用<b>管理員</b>帳戶登入 Nextcloud → 右上角頭像 →「<b>應用程式</b>」(Apps)。</li>
+ <li>右上角搜尋「<b>WebAppPassword</b>」→「<b>下載並啟用</b>」(Download and enable)。</li>
+ <li>右上角頭像 →「<b>管理設定</b>」(Administration settings) → 左邊揀「<b>WebAppPassword</b>」。</li>
+ <li>喺 WebDAV 嗰格（Allowed origins for WebDAV）填：<code class="key">https://martin498498.github.io</code> →「<b>儲存</b>」。</li></ol></div>
+ <div class="card"><h3>第 2 步：開一個應用程式密碼</h3><ol>
+ <li>Nextcloud 右上角頭像 →「<b>個人設定</b>」(Personal settings) → 左邊「<b>安全性</b>」(Security)。</li>
+ <li>最底「裝置與工作階段」→ 應用程式名稱填「<b>童鞋辦公室-${esc(deviceLabel())}</b>」→「<b>建立新的應用程式密碼</b>」。</li>
+ <li>會顯示「用戶名」同「密碼」，抄落下面（呢個密碼只會顯示一次）。</li></ol>
+ <p class="muted">每部機（電腦、iPhone）建議各開一個，咁唔見咗部機都可以喺 Nextcloud 單獨刪除佢嘅權限。</p></div>
+ <div class="card"><h3>第 3 步：連接</h3><div class="form">
+ ${F('Nextcloud 網址','<input id="nc_url" placeholder="例如 https://nas.example.co.uk" autocomplete="off">','w2')}${F('用戶名','<input id="nc_user" autocomplete="off" autocapitalize="off">')}${F('應用程式密碼','<input id="nc_pass" type="password" autocomplete="off">')}</div>
+ <div id="nc_msg" class="muted" style="margin-top:8px"></div><div class="bar" style="margin-top:10px"><button class="pri" id="nc_btn" onclick="ncConnect()">測試並連接</button></div></div>`}`}
+function ncFormCreds(){return{url:ncNormUrl(document.getElementById('nc_url').value),user:document.getElementById('nc_user').value.trim(),pass:document.getElementById('nc_pass').value.replace(/\s/g,'')}}
+async function ncConnect(){const m=document.getElementById('nc_msg'),btn=document.getElementById('nc_btn');let c;
+ try{c=ncFormCreds()}catch(e){m.innerHTML='<span class="warn">網址唔啱</span>';return}if(!c.user||!c.pass){m.innerHTML='<span class="warn">請填用戶名同應用程式密碼</span>';return}
+ btn.disabled=true;m.textContent='連接緊…';
+ try{await ncMkcol(c);const rv=await ncGetJson(c,'rev.json');btn.disabled=false;
+  const done=async(useCloud)=>{NC=c;await ncSaveCreds();NCST={rev:null,dirty:false,last:0,err:''};await ncSaveState();
+   if(useCloud){ncBusy=true;try{await ncTakeRemote()}catch(e){NCST.err=ncErrMsg(e)}ncBusy=false;paintSync();render()}else{await ncPush(true);render()}toast('☁ 已連接 Nextcloud')};
+  if(rv){const when=rv.savedAt?new Date(rv.savedAt).toLocaleString('zh-HK',{hour12:false}):'';const b=document.getElementById('modalBox');
+   b.innerHTML=`<h3 style="margin-top:0">Nextcloud 已經有資料</h3><p>由 <b>${esc(rv.by||'另一部機')}</b> 喺 ${esc(when)} 上載。你想：</p><div style="display:flex;flex-direction:column;gap:8px"><button class="pri" id="mcl">用 Nextcloud 嘅資料（取代呢部機）</button><button id="mlo">用呢部機嘅資料（覆蓋 Nextcloud）</button><button onclick="closeModal()">取消</button></div>`;
+   document.getElementById('modal').style.display='flex';document.getElementById('mcl').onclick=()=>{closeModal();done(true)};document.getElementById('mlo').onclick=()=>{closeModal();done(false)}}
+  else await done(false)}
+ catch(e){btn.disabled=false;m.innerHTML='<span class="warn">'+esc(ncErrMsg(e))+'</span>'}}
+async function ncDisconnect(){NC=null;NCST={rev:null,dirty:false,last:0,err:''};await idbDel('nc');await idbDel('ncstate');paintSync();render();toast('已中斷 Nextcloud')}
+
+/* 新機：由 Nextcloud 載入（登入之前） */
+function ncLoadView(){showAuth(`<h2>由 Nextcloud 載入</h2><p class="amuted">如果你已經喺另一部機開咗 Nextcloud 同步，喺度填 Nextcloud 資料，就可以攞返全部資料。之後用<b>原本嘅密碼同驗證碼</b>登入。</p>
+ <form onsubmit="event.preventDefault();ncLoadDo()"><label>Nextcloud 網址</label><input id="nc_url" placeholder="https://nas.example.co.uk" autocomplete="off" autocapitalize="off">
+ <label>用戶名</label><input id="nc_user" autocomplete="off" autocapitalize="off"><label>應用程式密碼（建議呢部機另外開一個）</label><input id="nc_pass" type="password" autocomplete="off">
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">載入</button></form>
+ <div class="alinks"><a href="javascript:${VAULT?'loginView()':'setupPw()'}">← 返回</a></div>`)}
+async function ncLoadDo(){let c;try{c=ncFormCreds()}catch(e){return aerr('網址唔啱')}if(!c.user||!c.pass)return aerr('請填用戶名同應用程式密碼');busy(true,'載入');
+ try{const v=await ncGetJson(c,'vault.json');if(!v||!v.pw||!v.data){busy(false,'載入');return aerr('Nextcloud 入面未有資料。請先喺已經用緊嘅機度開啟「☁ Nextcloud 同步」。')}
+  VAULT=v;await idbPut('vault',v);await idbDel('state');PENDING_NC={creds:c,rev:v.rev||null};SETUP=null;loginView('已由 Nextcloud 載入。請用原本嘅密碼同驗證碼登入（Authenticator 入面「'+ISSUER+'（'+(v.label||'admin')+'）」）。')}
+ catch(e){busy(false,'載入');aerr(ncErrMsg(e))}}
 
 boot();
 </script>
