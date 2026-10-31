@@ -218,10 +218,13 @@ label.btn.sm{padding:4px 10px;font-size:13px}
 .doc .nmeta{font-size:10px;color:#444;margin-bottom:3px}
 .doc .nimgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.doc .nimgs img{max-width:58mm;max-height:58mm;border:1px solid #999}
 @media screen and (max-width:800px){.card.sup{flex-direction:column}.supimg{flex-direction:row;width:auto}.supimg img{width:80px}}
+
+.doc.pdfmode{min-height:0!important;margin:0!important;box-shadow:none}
+#pvbar button{white-space:nowrap}
 </style>
 </head>
 <body>
-<div id="pvbar"><button class="pri" onclick="window.print()">🖨 列印 / 存 PDF</button><button onclick="closePreview()">✕ 返回編輯</button></div>
+<div id="pvbar"><button class="pri" id="pdfbtn" onclick="savePDF()">⬇ 存 PDF</button><button onclick="doPrint()">🖨 列印</button><button onclick="closePreview()">✕ 返回</button></div>
 <div id="auth"></div>
 <div id="topbar"><button onclick="toggleNav(true)" aria-label="選單">☰</button><span id="tbTitle">童鞋辦公室</span><a class="syncstat" href="#cloud" style="display:none"></a><a href="javascript:lockNow()" aria-label="鎖定">🔒</a></div>
 <div id="navShade" onclick="toggleNav(false)"></div>
@@ -683,15 +686,47 @@ function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=
   <div class="two"><div>${p?`<div class="sec">PACKING SUMMARY</div>${kv([['Total Cartons:',f0(p.ctn)],['Total Pairs:',f0(p.prs)],['Total N.W.:',f1(p.nw)+' kg'],['Total G.W.:',f1(p.gw)+' kg'],['Measurement:',f3(p.cbm)+' CBM']],1)}`:''}</div><div>${bankBlock()}</div></div>${sign(['',''],[ours(),'Authorized Signature'])}`}
  if(d.type==='CO'){const m=matrixPrint(d.lines,{price:cp?l=>l.price:null});h+=`<div class="title">ORDER DETAILS 訂單明細（內部）</div><div class="two">${custBlock(d)}<div>${kv([['客人 PO:',d.custPO],['Date:',d.date],['ETD:',d.etd],['Payment:',d.payment]])}</div></div>${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td>${cp?`<td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td>`:''}</tr></table>`}
  return h}
-async function preview(id){const d=docById(id);if(d.type==='SD'&&(d.notes||[]).some(n=>n.files.some(f=>f.img))){toast('載入相片中…');const miss=await loadDocAtts(d);if(miss)toast(`有 ${miss} 張相未同步到，暫時用縮圖`)}const land=d.type==='PL'&&d.lines.some(l=>sizesOf(l.devNo).length>10);
+let PREVIEW_ID=null;
+const isLand=d=>d.type==='PL'&&d.lines.some(l=>sizesOf(l.devNo).length>10);
+function renderPreview(d){const land=isLand(d);
  document.getElementById('printArea').innerHTML=`<div class="doc ${land?'land':''}">${docHTML(d)}</div>`;
  let st=document.getElementById('pgsz');if(!st){st=document.createElement('style');st.id='pgsz';document.head.appendChild(st)}
  st.textContent=`@media print{@page{size:A4 ${land?'landscape':'portrait'};margin:0}}`;
- document.title=d.no+(d.custPO?' '+d.custPO:'');document.body.classList.add('preview');fitDoc();window.scrollTo(0,0)}
+ document.title=pdfName(d).replace(/\.pdf$/,'');document.body.classList.add('preview');fitDoc()}
+const withTimeout=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+// 即刻顯示預覽（相片先用縮圖），原相喺背後載入，載入完自動更新
+function preview(id){try{const d=docById(id);if(!d)return toast('搵唔到呢張單');PREVIEW_ID=id;renderPreview(d);window.scrollTo(0,0);
+  if(d.type==='SD'&&(d.notes||[]).some(n=>n.files.some(f=>f.img&&!ATT_URL[f.id]))){
+   withTimeout(loadDocAtts(d),20000).then(miss=>{if(PREVIEW_ID===id&&document.body.classList.contains('preview'))renderPreview(d);if(miss)toast(`有 ${miss} 張相未同步到，暫時用縮圖`)}).catch(()=>toast('部分相片載入太耐，暫時用縮圖'))}}
+ catch(e){showErr('開唔到預覽',e)}}
+function showErr(title,e){console.error(e);const b=document.getElementById('modalBox');b.style.maxWidth='520px';b.innerHTML=`<h3 style="margin-top:0">⚠ ${esc(title)}</h3><p>請截圖俾 Claude：</p><pre style="white-space:pre-wrap;background:#f6f6f6;padding:8px;font-size:12px">${esc((e&&(e.stack||e.message))||String(e))}\n${esc(navigator.userAgent)}</pre><div class="bar" style="justify-content:flex-end;margin:0"><button class="pri" onclick="closeModal()">關閉</button></div>`;document.getElementById('modal').style.display='flex'}
+window.addEventListener('error',e=>{if(e&&e.message&&!/ResizeObserver/.test(e.message))toast('出錯：'+e.message)});
+window.addEventListener('unhandledrejection',e=>{const m=e&&e.reason&&(e.reason.message||String(e.reason));if(m&&!/AbortError|NotAllowedError/.test(m))toast('出錯：'+m)});
+function pdfName(d){const parts=[d.no,d.custPO,d.devNo].filter(Boolean);return [...new Set(parts)].join(' ').replace(/[\\/:*?"<>|]/g,'-')+'.pdf'}
+const isIOS=()=>/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function doPrint(){if(isIOS()&&navigator.standalone){const b=document.getElementById('modalBox');b.innerHTML=`<p>iPhone 主畫面 App 唔支援直接列印。</p><p>請㩒「⬇ 存 PDF」，之後喺分享選單揀「<b>列印</b>」（AirPrint）或者「儲存到檔案」。</p><div class="bar" style="justify-content:flex-end;margin:0"><button onclick="closeModal()">取消</button><button class="pri" onclick="closeModal();savePDF()">⬇ 存 PDF</button></div>`;document.getElementById('modal').style.display='flex';return}
+ try{window.print()}catch(e){showErr('列印失敗',e)}}
+let pdfBusy=false;
+async function savePDF(){if(pdfBusy)return;const d=docById(PREVIEW_ID);const el=document.querySelector('#printArea .doc');if(!d||!el)return;pdfBusy=true;
+ const btn=document.getElementById('pdfbtn');if(btn){btn.disabled=true;btn.textContent='整緊 PDF…'}
+ try{if(!window.html2pdf)await loadScript2(new URL('pdf/html2pdf.bundle.min.js',location.href).href);
+  await Promise.all([...el.querySelectorAll('img')].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r;setTimeout(r,8000)})));
+  const z=el.style.zoom;el.style.zoom='';el.classList.add('pdfmode');const name=pdfName(d);
+  let blob;try{blob=await html2pdf().set({margin:[8,0,8,0],filename:name,image:{type:'jpeg',quality:0.92},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
+    jsPDF:{unit:'mm',format:'a4',orientation:isLand(d)?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.nentry','.sign','table.kv','.box','.pic','.lh','.title','.two']}}).from(el).outputPdf('blob')}
+  finally{el.classList.remove('pdfmode');el.style.zoom=z;fitDoc()}
+  deliverPDF(blob,name)}
+ catch(e){showErr('整唔到 PDF',e)}finally{pdfBusy=false;if(btn){btn.disabled=false;btn.textContent='⬇ 存 PDF'}}}
+function loadScript2(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('載入 PDF 工具失敗（第一次要有網絡）'));document.head.appendChild(s)})}
+function deliverPDF(blob,name){const file=new File([blob],name,{type:'application/pdf'});
+ if(isIOS()&&navigator.canShare&&navigator.canShare({files:[file]})){const b=document.getElementById('modalBox');b.style.maxWidth='420px';
+  b.innerHTML=`<h3 style="margin-top:0">✅ PDF 已經整好</h3><p><b>${esc(name)}</b>（${Math.round(blob.size/1024)} KB）</p><p class="muted">㩒下面個掣，再揀「儲存到檔案」、WhatsApp、電郵，或者「列印」。</p><div class="bar" style="justify-content:flex-end;margin:0"><button onclick="closeModal()">關閉</button><button class="pri" id="pdfshare">分享 / 儲存 PDF</button></div>`;
+  document.getElementById('modal').style.display='flex';document.getElementById('pdfshare').onclick=()=>{navigator.share({files:[file],title:name}).then(()=>closeModal()).catch(()=>{})};return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();toast('已儲存 PDF：'+name)}
 function fitDoc(){const e=document.querySelector('#printArea .doc');if(!e)return;e.style.zoom='';const w=e.offsetWidth,avail=Math.min(window.innerWidth,screen.width||1e9,document.getElementById('printArea').clientWidth||1e9)-12;e.style.zoom=w>avail?(avail/w).toFixed(3):''}
 window.addEventListener('resize',()=>{if(document.body.classList.contains('preview'))fitDoc()});
 function toggleNav(on){document.body.classList.toggle('navopen',on)}
-function closePreview(silent){document.body.classList.remove('preview');document.title='童鞋貿易辦公室系統'}
+function closePreview(silent){PREVIEW_ID=null;document.body.classList.remove('preview');document.title='童鞋貿易辦公室系統'}
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('preview'))closePreview()});
 
 
