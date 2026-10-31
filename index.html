@@ -841,7 +841,7 @@ async function ncFetch(c,method,name,body){let r;
 async function ncGetJson(c,name){const r=await ncFetch(c,'GET',name);if(r.status===404)return null;if(!r.ok){const e=new Error('HTTP '+r.status);e.code='http';throw e}return r.json()}
 async function ncPut(c,name,obj){const r=await ncFetch(c,'PUT',name,JSON.stringify(obj));if(!r.ok){const e=new Error('HTTP '+r.status);e.code='http';throw e}}
 async function ncMkcol(c){const r=await ncFetch(c,'MKCOL','');if(!(r.ok||r.status===405)){const e=new Error('HTTP '+r.status);e.code='http';throw e}}
-function ncErrMsg(e){return e.code==='auth'?'用戶名或者應用程式密碼唔啱':e.code==='net'?'連唔到 Nextcloud：請檢查網址，同埋 WebAppPassword 有冇加入 https://martin498498.github.io（亦可能係 NAS 冇開機 / 冇網絡）':'Nextcloud 回覆錯誤（'+e.message+'）'}
+function ncErrMsg(e){return e.code==='auth'?'用戶名或者應用程式密碼唔啱':e.code==='net'?'連唔到 Nextcloud：請檢查網址，同埋有冇做第 1 步「開放權限」（亦可能係 Pi 冇開機 / 冇網絡）':'Nextcloud 回覆錯誤（'+e.message+'）'}
 
 async function ncSaveState(){try{await idbPut('ncstate',NCST)}catch(e){}}
 async function ncSaveCreds(){if(NC&&DK)await idbPut('nc',await encData(DK,NC))}
@@ -895,11 +895,11 @@ function ncView(){const ok=!!NC;return `<h2>☁ Nextcloud 同步</h2>
  <div class="bar"><button class="pri" onclick="ncPull()">立即同步</button><button class="del" onclick="ask('中斷之後，呢部機唔會再同步（資料仍然保留喺呢部機同 Nextcloud）。確定？',ncDisconnect)">中斷連接</button></div>
  ${NCST.foreign?`<div class="warnbox card" style="margin-top:10px">雲端資料用咗另一套密碼加密。<div class="bar" style="margin-top:8px"><button onclick="ask('用呢部機嘅資料覆蓋 Nextcloud？雲端嗰份會被取代。',()=>ncPush(true))">用呢部機資料覆蓋雲端</button></div></div>`:''}</div>
  <div class="card"><h3>點運作</h3><ul><li>每次改完約 3 秒自動上傳；開 App、切返嚟 App、每分鐘都會檢查有冇新資料。</li><li>上傳之前已經用你嘅密碼加密，Nextcloud 入面只係亂碼。</li><li>兩部機同時改咗嘢，會問你保留邊個版本。</li><li>冇網絡時照用，有網絡會自動補上傳。</li></ul></div>`
- :`<div class="card"><h3>第 1 步：喺 Nextcloud 開放權限（只做一次，要管理員）</h3><ol>
- <li>用<b>管理員</b>帳戶登入 Nextcloud → 右上角頭像 →「<b>應用程式</b>」(Apps)。</li>
- <li>右上角搜尋「<b>WebAppPassword</b>」→「<b>下載並啟用</b>」(Download and enable)。</li>
- <li>右上角頭像 →「<b>管理設定</b>」(Administration settings) → 左邊揀「<b>WebAppPassword</b>」。</li>
- <li>喺 WebDAV 嗰格（Allowed origins for WebDAV）填：<code class="key">https://martin498498.github.io</code> →「<b>儲存</b>」。</li></ol></div>
+ :`<div class="card"><h3>第 1 步：喺 Nextcloud 開放權限（只做一次）</h3>
+ <p><b>方法 A（Raspberry Pi / 自己架設，用 Apache）：</b>喺 Pi 嘅終端機（SSH）貼呢一行，按 Enter，輸入 Pi 嘅密碼：</p>
+ <p><code class="key" style="display:block;padding:8px;white-space:pre-wrap">curl -fsSL https://raw.githubusercontent.com/martin498498/office/main/tools/nextcloud-cors.sh | sudo bash</code></p>
+ <p class="muted">見到「✅ 完成」就得。佢會先備份設定，只准許呢個系統經 WebDAV 連接；想還原可以再執行一次並加 <code>--remove</code>。</p>
+ <p><b>方法 B（舊版 Nextcloud）：</b>管理員 →「應用程式」安裝 <b>WebAppPassword</b> → 管理設定 → WebAppPassword → WebDAV 允許來源填 <code class="key">https://martin498498.github.io</code>。（Nextcloud 34 暫時未有呢個插件）</p></div>
  <div class="card"><h3>第 2 步：開一個應用程式密碼</h3><ol>
  <li>Nextcloud 右上角頭像 →「<b>個人設定</b>」(Personal settings) → 左邊「<b>安全性</b>」(Security)。</li>
  <li>最底「裝置與工作階段」→ 應用程式名稱填「<b>童鞋辦公室-${esc(deviceLabel())}</b>」→「<b>建立新的應用程式密碼</b>」。</li>
