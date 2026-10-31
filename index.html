@@ -697,6 +697,7 @@ async function hotp(secret,counter){const key=await crypto.subtle.importKey('raw
  const code=(((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1000000;return String(code).padStart(6,'0')}
 async function verifyTotp(secret,code){code=String(code||'').replace(/\D/g,'');if(code.length!==6)return false;const t=Math.floor(Date.now()/30000);for(const w of[-1,0,1])if(await hotp(secret,t+w)===code)return true;return false}
 const ISSUER='童鞋貿易辦公室';
+function deviceLabel(){const u=navigator.userAgent;if(/iPhone/.test(u))return 'iPhone';if(/iPad/.test(u)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return 'iPad';if(/Android/.test(u))return 'Android';if(/Mac/.test(u))return 'Mac電腦';if(/Windows/.test(u))return 'Windows電腦';return '電腦'}
 const otpUri=(secret,label)=>`otpauth://totp/${encodeURIComponent(ISSUER+':'+label)}?secret=${secret}&issuer=${encodeURIComponent(ISSUER)}&algorithm=SHA1&digits=6&period=30`;
 function qrSvg(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:5,margin:4,scalable:true})}
 function newRecoveryCode(){const b=rand(20);let s='';for(const x of b)s+=B32[x&31];return s.match(/.{4}/g).join('-')}
@@ -724,7 +725,7 @@ function failReset(){localStorage.removeItem('so-fail')}
 
 function loginView(msg){showAuth(`<h2>登入</h2>
  <form onsubmit="event.preventDefault();doLogin()"><label>密碼</label><input type="password" id="apw" autocomplete="current-password">
- <label>手機驗證碼（6 位數）</label><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+ <label>手機驗證碼（6 位數）</label><div class="amuted" style="margin:-2px 0 4px">用 Authenticator 入面「${ISSUER}（${esc(VAULT?.label||'admin')}）」嗰組數字</div><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
  <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div>
  <button class="pri" id="abtn" type="submit">登入</button></form>
  <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><a href="javascript:wipeView()" style="color:#b00">唔記得密碼又冇恢復碼？清除資料，重新開始</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
@@ -751,9 +752,9 @@ function setupPw(){showAuth(`<h2>${SETUP.mode==='recover'?'設定新密碼':'第
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">下一步</button></form>
  ${SETUP.mode==='new'?`<div class="alinks"><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`:''}`)}
 function setupPw2(){const a=document.getElementById('apw').value,b=document.getElementById('apw2').value;if(a.length<8)return aerr('密碼最少要 8 個字');if(a!==b)return aerr('兩次輸入嘅密碼唔一樣');SETUP.pw=a;SETUP.totp=b32enc(rand(20));setupTotp()}
-function setupTotp(){const uri=otpUri(SETUP.totp,'admin');showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
+function setupTotp(){const uri=otpUri(SETUP.totp,deviceLabel());showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
  <ol class="amuted" style="text-align:left;padding-left:18px"><li>喺手機安裝 <b>Google Authenticator</b> 或者 <b>Microsoft Authenticator</b>（免費）。</li><li>喺 App 入面揀「＋」→「掃描 QR 碼」，掃下面個 QR 碼。</li><li>將 App 顯示嘅 6 位數字輸入落下面。</li></ol>
- <div class="qr">${qrSvg(uri)}</div><div class="amuted">掃唔到？喺 App 揀「手動輸入」，金鑰：<br><code class="key">${SETUP.totp.match(/.{4}/g).join(' ')}</code></div>
+ <p class="amuted" style="background:#f1f4fa;padding:8px;border-radius:4px">掃完之後，App 入面會多一個「<b>${ISSUER}（${deviceLabel()}）</b>」。<br>如果你喺其他機（例如 iPhone / 電腦）都設定過，App 會有幾個記錄，<b>每部機要用返佢自己嗰個</b>。</p><div class="qr">${qrSvg(uri)}</div><div class="amuted">掃唔到？喺 App 揀「手動輸入」，金鑰：<br><code class="key">${SETUP.totp.match(/.{4}/g).join(' ')}</code></div>
  <form onsubmit="event.preventDefault();setupTotp2()"><label>App 顯示嘅 6 位數字</label><input id="acode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
  <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">確認</button></form>`)}
 async function setupTotp2(){if(!(await verifyTotp(SETUP.totp,document.getElementById('acode').value)))return aerr('驗證碼唔啱，請再試（確認手機時間正確）');SETUP.rc=newRecoveryCode();setupRC()}
@@ -767,7 +768,7 @@ async function setupFinish(){if(!document.getElementById('aok').checked)return a
  try{let dk=SETUP.dk,s=SETUP.s;
   if(SETUP.mode==='new'){dk=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);s=SETUP.plain||seed()}
   s.auth={totp:SETUP.totp};
-  VAULT={v:1,created:VAULT?.created||new Date().toISOString(),pw:await wrapWith(SETUP.pw,dk),rc:await wrapWith(normRC(SETUP.rc),dk),data:await encData(dk,s)};
+  VAULT={v:1,label:deviceLabel(),created:VAULT?.created||new Date().toISOString(),pw:await wrapWith(SETUP.pw,dk),rc:await wrapWith(normRC(SETUP.rc),dk),data:await encData(dk,s)};
   await idbPut('vault',VAULT);await idbDel('state');SETUP=null;failReset();enterApp(dk,s);toast('設定完成 🔒')}
  catch(e){console.error(e);busy(false,'完成，開始使用');aerr('出錯：'+e.message)}}
 
@@ -808,8 +809,8 @@ async function changePw(){const o=document.getElementById('s_old').value,a=docum
  if(a.length<8)return toast('新密碼最少要 8 個字');if(a!==b)return toast('兩次輸入嘅新密碼唔一樣');if(!(await checkPw(o)))return toast('現有密碼唔啱');
  VAULT.pw=await wrapWith(a,DK);await flush();toast('密碼已更改');render()}
 async function resetTotp(){if(!(await checkPw(document.getElementById('t_pw').value)))return toast('密碼唔啱');const sec=b32enc(rand(20));
- document.getElementById('tbox').innerHTML=`<div style="margin-top:12px"><p>用手機 Authenticator 掃呢個 QR 碼（或者手動輸入金鑰 <code class="key">${sec.match(/.{4}/g).join(' ')}</code>），然後輸入顯示嘅 6 位數字：</p><div class="qr" style="text-align:left">${qrSvg(otpUri(sec,'admin'))}</div><div class="bar"><input id="t_code" maxlength="6" inputmode="numeric" style="width:140px"><button class="pri" onclick="confirmTotp('${sec}')">確認</button></div></div>`}
-async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};await flush();toast('手機驗證碼已更新');render()}
+ document.getElementById('tbox').innerHTML=`<div style="margin-top:12px"><p>用手機 Authenticator 掃呢個 QR 碼（或者手動輸入金鑰 <code class="key">${sec.match(/.{4}/g).join(' ')}</code>），然後輸入顯示嘅 6 位數字：</p><div class="qr" style="text-align:left">${qrSvg(otpUri(sec,deviceLabel()))}</div><div class="bar"><input id="t_code" maxlength="6" inputmode="numeric" style="width:140px"><button class="pri" onclick="confirmTotp('${sec}')">確認</button></div></div>`}
+async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};VAULT.label=deviceLabel();await flush();toast('手機驗證碼已更新');render()}
 async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),DK);await flush();
  document.getElementById('rbox').innerHTML=`<p>新恢復碼（舊嗰組已經失效），請即刻抄低：</p><div class="rc">${rc}</div><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${rc}','text/plain')">下載做文字檔</button>`}
 
