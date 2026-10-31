@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>童鞋貿易辦公室系統</title>
+<style>
+:root{--navy:#1f3864;--sub:#d9e1f2;--inp:#fff9d9;--line:#c8ccd4;--muted:#6b7280;--bg:#f4f6fa;--ok:#2e7d32;--warn:#c00000}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-size:14px;color:#111;background:var(--bg)}
+#app{display:flex;min-height:100vh}
+nav{width:200px;background:var(--navy);color:#fff;flex-shrink:0;padding:12px 0;position:sticky;top:0;height:100vh;overflow:auto}
+nav h1{font-size:15px;margin:0 16px 12px;line-height:1.3}
+nav .grp{font-size:11px;color:#9fb0d0;margin:14px 16px 4px;letter-spacing:.05em}
+nav a{display:block;color:#fff;text-decoration:none;padding:7px 16px;font-size:14px;cursor:pointer}
+nav a:hover{background:rgba(255,255,255,.1)}
+nav a.on{background:#fff;color:var(--navy);font-weight:bold}
+main{flex:1;padding:20px 24px;min-width:0}
+h2{margin:0 0 14px;font-size:20px;color:var(--navy)}
+h3{margin:18px 0 8px;font-size:15px;color:var(--navy)}
+button{font:inherit;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:6px 12px;border-radius:4px;cursor:pointer}
+button.pri{background:var(--navy);color:#fff}
+button.del{border-color:var(--warn);color:var(--warn)}
+button.sm{padding:2px 8px;font-size:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar .sp{flex:1}
+input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:3px;padding:4px 6px;background:var(--inp);color:#0000c8;width:100%}
+input[readonly]{background:#f1f1f1;color:#111}
+textarea{min-height:60px}
+table.list{border-collapse:collapse;width:100%;background:#fff}
+table.list th{background:var(--navy);color:#fff;font-weight:normal;padding:6px;text-align:left;font-size:13px;white-space:nowrap}
+table.list td{border-bottom:1px solid #e5e7eb;padding:6px;font-size:13px;vertical-align:middle}
+table.list tr:hover td{background:#f7f9fc}
+table.grid{border-collapse:collapse;background:#fff}
+table.grid th{background:var(--navy);color:#fff;font-weight:normal;padding:4px;font-size:12px;white-space:nowrap}
+table.grid td{border:1px solid var(--line);padding:2px;font-size:13px}
+table.grid td.c{text-align:center;background:#fff;min-width:60px;padding:2px 6px}
+table.grid input{border:none;padding:3px;min-width:40px}
+table.grid input.sz{width:42px;min-width:42px;text-align:center}
+table.grid tr.tot td{background:#ededed;font-weight:bold}
+.card{background:#fff;border:1px solid #e3e6ec;border-radius:6px;padding:14px 16px;margin-bottom:14px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+.form label{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.form .wide{grid-column:1/-1}
+.scroll{overflow-x:auto}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#e8eefb;color:var(--navy)}
+.muted{color:var(--muted);font-size:12px}
+.warn{color:var(--warn);font-weight:bold}
+.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid #e3e6ec;border-radius:6px;padding:10px 14px;min-width:150px}
+.kpi b{display:block;font-size:20px;color:var(--navy)}
+.imgbox{border:1px dashed #999;min-height:80px;display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-items:flex-start;background:#fafafa}
+.imgbox img{max-height:160px;max-width:240px;border:1px solid #ddd}
+.thumb{max-height:50px;max-width:70px;display:block}
+.toast{position:fixed;bottom:20px;right:20px;background:#333;color:#fff;padding:10px 16px;border-radius:6px;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9}
+#modal .box{background:#fff;border-radius:8px;padding:20px;max-width:420px;width:90%}
+/* ---------- print document ---------- */
+#printArea{display:none}
+.doc{background:#fff;width:210mm;min-height:297mm;padding:12mm 12mm;margin:0 auto;font-size:11px;color:#000;font-family:Arial,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+.doc.land{width:297mm;min-height:210mm}
+.doc .lh{text-align:center;border-bottom:2px solid var(--navy);padding-bottom:6px;margin-bottom:10px}
+.doc .lh .n{font-size:20px;font-weight:bold}
+.doc .lh .a{font-size:10px;margin-top:2px}
+.doc .title{text-align:center;font-size:17px;font-weight:bold;margin:10px 0 12px;letter-spacing:.05em}
+.doc .two{display:flex;justify-content:space-between;gap:20px;margin-bottom:12px}
+.doc .two>div{flex:1}
+.doc table.kv td{padding:2px 4px;vertical-align:top}
+.doc table.kv td:first-child{font-weight:bold;white-space:nowrap;text-align:right}
+.doc table.kv.l td:first-child{text-align:left}
+.doc table.t{width:100%;border-collapse:collapse;margin-bottom:8px}
+.doc table.t th{background:var(--navy);color:#fff;border:1px solid #555;padding:4px 3px;font-size:10px}
+.doc table.t td{border:1px solid #777;padding:3px;font-size:10.5px}
+.doc table.t td.c{text-align:center}.doc table.t td.r{text-align:right}
+.doc table.t tr.tot td{background:#ededed;font-weight:bold}
+.doc .sec{font-weight:bold;font-size:12px;margin:12px 0 4px}
+.doc .sign{display:flex;justify-content:space-between;margin-top:36px}
+.doc .sign>div{width:42%}
+.doc .sign .ln{border-top:1px solid #000;margin-top:44px;padding-top:3px;font-size:9px}
+.doc .box{border:1px solid #777;padding:6px;white-space:pre-wrap;min-height:40px}
+.doc .pic{border:1px solid #777;min-height:70mm;display:flex;flex-wrap:wrap;gap:6px;padding:6px;align-items:center;justify-content:center}
+.doc .pic img{max-height:68mm;max-width:90mm}
+.doc td img{max-height:22mm;max-width:30mm;display:block;margin:auto}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  #app,.toast,#modal{display:none!important}
+  #printArea{display:block!important}
+  .doc{margin:0;width:auto;min-height:0}
+  body.land-print .doc{width:auto}
+}
+@media screen{ body.preview #app{display:none} body.preview #printArea{display:block;padding:60px 0 30px} }
+#pvbar{display:none;position:fixed;top:0;left:0;right:0;background:var(--navy);padding:10px;gap:8px;justify-content:center;z-index:5}
+body.preview #pvbar{display:flex}
+@media print{#pvbar{display:none!important}}
+@media(max-width:800px){#app{flex-direction:column}nav{width:auto;height:auto;position:static}nav a{display:inline-block}nav .grp{display:none}}
+
+a{color:#1f3864}
+.btn{display:inline-block;font:inherit;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:6px 12px;border-radius:4px;cursor:pointer;text-decoration:none}
+.card h3{margin-top:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.scard{display:flex;gap:10px;background:#fff;border:1px solid #e3e6ec;border-radius:6px;padding:10px;text-decoration:none;color:#111}
+.scard:hover{border-color:var(--navy)}
+.simg{width:90px;height:90px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f4f4f4;border-radius:4px;overflow:hidden;color:#999;font-size:12px}
+.simg img{max-width:100%;max-height:100%}
+.sbody{font-size:13px;line-height:1.5;min-width:0}
+.imgbox .im{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.addimg{align-self:center;border:1px dashed var(--navy);color:var(--navy);padding:20px 16px;border-radius:6px;cursor:pointer;background:#fff}
+.noimg{display:flex;align-items:center;justify-content:center;background:#f2f2f2;color:#aaa;font-size:10px;border:1px solid #e5e5e5}
+.stg{display:flex;gap:2px;margin-bottom:2px}.stg i{display:block;width:16px;height:8px;border-radius:2px;background:#dde1e8}.stg i.d{background:#2e7d32}.stg i.l{background:#c00000}
+tr.late td{background:#fff1f1!important}
+.badge.grey{background:#eee;color:#555}.badge.ok{background:#e3f4e4;color:#2e7d32}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:16px}
+.fstep{background:#fff;border:1px solid #cfd6e4;border-radius:6px;padding:8px 10px;text-decoration:none;color:#111;width:150px}
+.fstep b{display:block;color:var(--navy)}.fstep span{font-size:11px;color:var(--muted)}.fstep:hover{border-color:var(--navy)}
+.arr{color:#9aa}
+a.kpi{text-decoration:none;color:#111}
+.warnbox{border-color:#f0b4b4;background:#fff5f5;color:#900}
+.totline{margin-top:10px;padding:8px 10px;background:#f1f4fa;border-radius:4px}
+.mgroup{border:1px solid #e3e6ec;border-radius:6px;padding:8px;margin-bottom:10px}
+.mhead{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.plrow{border:1px solid #e3e6ec;border-radius:6px;padding:8px;margin-bottom:8px}
+.plh{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:6px}
+.plh input,.plh select{display:inline-block}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form .w2{grid-column:span 2}
+table.list td .muted{font-size:11px}
+.doc td.lb{background:#d9e1f2;font-weight:bold;width:20%}
+.doc table.t{page-break-inside:auto}.doc table.t tr{page-break-inside:avoid}
+
+#auth{position:fixed;inset:0;background:linear-gradient(135deg,#1f3864,#2f5597);display:none;align-items:flex-start;justify-content:center;z-index:20;overflow:auto;padding:40px 12px}
+#auth .abox{background:#fff;border-radius:10px;padding:26px 28px;width:100%;max-width:440px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#auth .alogo{font-weight:bold;color:var(--navy);font-size:16px;margin-bottom:12px}
+#auth h2{margin:0 0 10px}
+#auth label{display:block;font-size:13px;color:#444;margin:12px 0 4px}
+#auth input{font-size:16px;padding:8px 10px;background:#fff;color:#111}
+#auth #acode{letter-spacing:6px;font-size:22px;text-align:center}
+#auth button.pri{width:100%;margin-top:16px;padding:10px;font-size:15px}
+#auth button:disabled{opacity:.6}
+.aerr{display:none;margin-top:10px;background:#fff1f1;color:#b00;border:1px solid #f3c0c0;border-radius:4px;padding:8px 10px;font-size:13px}
+.alinks{display:flex;flex-direction:column;gap:8px;margin-top:16px;font-size:13px}
+.alinks label{color:var(--navy);text-decoration:underline;cursor:pointer;margin:0;font-size:13px}
+.amuted{color:#555;font-size:13px;line-height:1.6}
+.steps{font-size:12px;color:#888;margin-bottom:10px}.steps b{color:var(--navy)}
+.qr{text-align:center;margin:8px 0}.qr svg{width:200px;height:200px}
+code.key{font-size:13px;background:#f1f4fa;padding:2px 6px;border-radius:3px;word-break:break-all;user-select:all}
+.rc{font-family:Consolas,monospace;font-size:20px;letter-spacing:1px;text-align:center;background:#fff9d9;border:2px dashed #c9a400;border-radius:6px;padding:14px;margin:10px 0;user-select:all;word-break:break-all}
+nav a.lockbtn{margin:0 16px 6px;border:1px solid rgba(255,255,255,.4);border-radius:4px;text-align:center;font-size:13px;padding:5px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid #c8ccd4;border-radius:14px;padding:3px 10px;font-size:13px;cursor:pointer;background:#fff;user-select:none;margin:2px 0}
+.chip:hover{border-color:var(--navy)}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip.sel{cursor:default;margin-right:4px}.chip.sel i{font-style:normal;cursor:pointer;opacity:.8;padding-left:2px}.chip.sel i:hover{opacity:1}
+</style>
+</head>
+<body>
+<div id="pvbar"><button class="pri" onclick="window.print()">🖨 列印 / 存 PDF</button><button onclick="closePreview()">✕ 返回編輯</button></div>
+<div id="auth"></div>
+<div id="app" style="display:none"><nav id="nav"></nav><main id="main"></main></div>
+<div id="printArea"></div>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+// Copyright (c) 2009 Kazuhiko Arase
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
+<script>
+/* =================== 基本工具 =================== */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+const addDays=(d,n)=>{if(!d)return'';const x=new Date(d);if(isNaN(x))return'';x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+const f2=n=>num(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const f0=n=>num(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const f1=n=>num(n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f3=n=>num(n).toFixed(3);
+const pct=(a,b)=>b?((a/b)*100).toFixed(1)+'%':'';
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2500)}
+const pathKeys=p=>[...p.matchAll(/\[([^\]]*)\]|([^.\[\]]+)/g)].map(m=>m[1]??m[2]);
+const getPath=(o,p)=>pathKeys(p).reduce((a,k)=>a==null?a:a[k],o);
+function setPath(o,p,v){const ks=pathKeys(p);const last=ks.pop();const t=ks.reduce((a,k)=>a[k]??(a[k]={}),o);t[last]=v}
+
+/* =================== 資料 =================== */
+const DEF_SAMPLE_STAGES=['資料發工廠','紙格 / 楦頭','物料準備','開裁','針車','成型','樣板完成','寄出客人','客人回覆'];
+const DEF_PROD_STAGES=['物料採購','物料到廠','開裁','針車','成型','包裝','驗貨','出貨'];
+function seed(){return{
+ company:{en:'[YOUR COMPANY] TRADING CO., LIMITED',cn:'[你的公司]貿易有限公司',addr:'Room XX, XX/F, XX Building, XX Road, Kowloon, Hong Kong',tel:'+852 XXXX XXXX',email:'you@yourcompany.com',contact:'Your Name',currency:'USD',pol:'Yantian, China',origin:'China',bank:'XXX Bank (Hong Kong) Limited',bankAddr:'XX Des Voeux Road Central, Hong Kong',accName:'[YOUR COMPANY] TRADING CO., LIMITED',accNo:'XXX-XXXXXX-XXX',swift:'XXXXHKHH'},
+ settings:{sampleStages:[...DEF_SAMPLE_STAGES],prodStages:[...DEF_PROD_STAGES]},
+ customers:[{id:uid(),code:'C001',name:'ABC Kids GmbH',addr:'Musterstrasse 1, 20095 Hamburg, Germany',attn:'Ms. Anna Schmidt',tel:'+49 40 1234567',email:'anna@abckids.de',country:'Germany',payment:'30% deposit, 70% before shipment',incoterm:'FOB',currency:'USD',dest:'Hamburg',note:'範例，可刪除'}],
+ factories:[{id:uid(),code:'F001',name:'東莞XX鞋業有限公司',addr:'廣東省東莞市厚街鎮XX路XX號',attn:'陳生',tel:'138-XXXX-XXXX',email:'chen@xxshoes.cn',payment:'30%訂金，出貨前付清',note:'範例，可刪除'}],
+ styles:[{id:uid(),devNo:'DEV-'+new Date().getFullYear()+'-001',custStyle:'',cust:'C001',name:'Kids Velcro Sneaker',sizeRange:'26-35',colors:'Navy, Pink',upper:'PU + Mesh',lining:'Mesh',sole:'TPR',factory:'F001',factoryPrice:6.2,sellPrice:8.5,sampleCost:'',prsCtn:12,nw:6.5,gw:7.5,L:60,W:40,H:35,hs:'6404.19',note:'範例，可刪除',images:[],created:Date.now()}],
+ docs:[]}}
+const findCust=c=>S.customers.find(x=>x.code===c)||{};
+const findFac=c=>S.factories.find(x=>x.code===c)||{};
+const findStyle=n=>S.styles.find(x=>x.devNo===n)||{};
+const docById=id=>S.docs.find(d=>d.id===id);
+const cbmOf=s=>s.L&&s.W&&s.H?+(num(s.L)*num(s.W)*num(s.H)/1e6).toFixed(3):'';
+function parseRange(r){r=String(r||'').trim();if(!r)return[];
+ const m=/^(\d+(?:\.\d+)?)\s*[-~–至]\s*(\d+(?:\.\d+)?)$/.exec(r);
+ if(m){const dec=m[1].includes('.')||m[2].includes('.');const half=/\.5$/.test(m[1])||/\.5$/.test(m[2]);const step=half?0.5:1;const a=+m[1],b=+m[2],out=[];
+  for(let x=a;x<=b+1e-9;x+=step)out.push(dec?x.toFixed(1):String(x));if(out.length&&out.length<=60)return out}
+ return r.split(/[,/、\s]+/).filter(Boolean)}
+function styleSizes(s){return Array.isArray(s.sizes)&&s.sizes.length?s.sizes:parseRange(s.sizeRange)}
+function sizesOf(devNo){const z=styleSizes(findStyle(devNo));return z.length?z:['均碼']}
+const sizeKey=z=>{const m=/^(\d+(?:\.\d+)?)([A-Za-z]*)$/.exec(z);return m?[{'':0,C:1,Y:2}[m[2].toUpperCase()]??3,+m[1]]:[9,0]};
+function sortSizes(a){return [...new Set(a)].sort((x,y)=>{const p=sizeKey(x),q=sizeKey(y);return p[0]-q[0]||p[1]-q[1]})}
+const sizeSummary=z=>!z.length?'':z.length<=6?z.join(', '):`${z[0]} - ${z[z.length-1]}（${z.length} 個碼）`;
+const SIZE_SYS={CM:{label:'CM 碼（14.0 格式）',list:Array.from({length:33},(_,i)=>(9+i*0.5).toFixed(1)),fmt:x=>x.toFixed(1),steps:[0.5,1]},
+ EU:{label:'EU 歐碼',list:Array.from({length:26},(_,i)=>String(15+i)),fmt:x=>Number.isInteger(x)?String(x):x.toFixed(1),steps:[1,0.5]},
+ US:{label:'US 美碼（C / Y）',list:[...Array.from({length:14},(_,i)=>i+'C'),...Array.from({length:7},(_,i)=>(i+1)+'Y')]}};
+const colorsOf=devNo=>String(findStyle(devNo).colors||'').split(/[,/、]+/).map(s=>s.trim()).filter(Boolean);
+const imgOf=devNo=>(findStyle(devNo).images||[])[0]||'';
+const qtyTot=q=>Object.values(q||{}).reduce((a,b)=>a+num(b),0);
+const curOf=d=>findCust(d.cust).currency||S.company.currency;
+const priceTerm=d=>{const c=findCust(d.cust);return c.incoterm?`${c.incoterm} ${S.company.pol}`:''};
+const stagesFrom=list=>list.map(n=>({name:n,plan:'',actual:'',note:''}));
+function stageInfo(st){st=st||[];let cur='未開始',done=0;st.forEach(s=>{if(s.actual){cur=s.name;done++}});const next=st.find(s=>!s.actual);const late=!!(next&&next.plan&&next.plan<today());return{cur,done,total:st.length,next,late,finished:st.length&&!next}}
+
+/* =================== 單據類型 =================== */
+const T={
+ SD:{name:'樣板單',prefix:'SD'},
+ QT:{name:'報價單',prefix:'QT'},
+ CO:{name:'客人訂單',prefix:'OR'},
+ PO:{name:'採購單',prefix:'PO'},
+ PL:{name:'Packing List',prefix:'INV'},
+ INV:{name:'Invoice',prefix:'INV'},
+ PI:{name:'PI / SC',prefix:'PI'},
+};
+function nextNo(prefix){const y=new Date().getFullYear();const re=new RegExp('^'+prefix+'-'+y+'-(\\d+)$');let m=0;
+ (prefix==='DEV'?S.styles.map(s=>s.devNo):S.docs.map(d=>d.no)).forEach(n=>{const r=re.exec(n||'');if(r)m=Math.max(m,+r[1])});
+ return `${prefix}-${y}-${String(m+1).padStart(3,'0')}`}
+const SAMPLE_TYPES=['初樣','修改樣','確認樣','影相樣','產前樣','船頭樣'];
+const SAMPLE_STATUS=['進行中','已寄客','待修改','已確認','已取消'];
+const SD_PARTS=['鞋面 Upper','鞋面配料 Upper 2','內裡 Lining','鞋墊 Insock','中底 Midsole','大底 Outsole','魔術貼 / 鞋帶 Closure','配件 Trims','印刷 / LOGO','包裝 Packing'];
+const PAY_TYPES=['訂金','尾數','其他'];
+
+function newDoc(type,extra={}){
+ const d={id:uid(),type,no:nextNo(T[type].prefix),date:today(),created:Date.now(),lines:[]};
+ const c0=S.customers[0]?.code||'';
+ if(type==='SD'){const st=findStyle(extra.devNo);Object.assign(d,{devNo:extra.devNo||'',cust:st.cust||c0,fac:st.factory||S.factories[0]?.code||'',stype:'初樣',qty:'1 pair',sampleSize:'',colors:st.colors||'',due:addDays(today(),14),images:[],
+  parts:SD_PARTS.map(p=>({part:p,mat:p.startsWith('鞋面 ')?st.upper||'':p.startsWith('內裡')?st.lining||'':p.startsWith('大底')?st.sole||'':'',color:'',rem:''})),special:'',reply:{cost:'',bulk:'',mould:'',lead:'',moq:'',delivered:''},
+  stages:stagesFrom(S.settings.sampleStages),status:'進行中',courier:'',feedback:''})}
+ if(type==='QT')Object.assign(d,{cust:c0,valid:addDays(today(),30),leadTime:'45-60 days after sample approval and deposit received',packing:'Each pair in color box, export carton',sample:'Sample cost refundable upon bulk order',remarks:'Prices based on current material costs.',status:'等客人回覆'});
+ if(type==='CO')Object.assign(d,{cust:c0,custPO:'',qtId:'',etd:'',payment:findCust(c0).payment||'',payments:[],status:'進行中'});
+ if(type==='PO')Object.assign(d,{fac:'',coId:'',devNo:'',custPO:'',delivery:'',cost:'',req:{mat:'按確認樣',pack:'每對入彩盒，每箱 12 對',mark:'正嘜：客人LOGO / PO No. / Style / Color / C/No.　側嘜：Size / Qty / N.W. / G.W. / Made in China',qc:'需通過 EN71-3 / REACH 測試；大貨須與確認樣一致',insp:'出貨前 AQL 2.5 驗貨，合格後方可出貨',rem:'如未能按時交貨，請提前通知'},stages:stagesFrom(S.settings.prodStages)});
+ if(type==='PL')Object.assign(d,{cust:c0,coId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',marks:''});
+ if(type==='INV')Object.assign(d,{cust:c0,coId:'',plId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',sayTotal:'',lessDeposit:false});
+ if(type==='PI')Object.assign(d,{title:'PROFORMA INVOICE',cust:c0,coId:'',custPO:'',etd:'',packing:'Each pair in color box, export carton',remarks:'Quantity tolerance ±3%.',sayTotal:''});
+ Object.assign(d,extra);return d}
+
+/* =================== 計算 =================== */
+function coTotals(co){let qty=0,amt=0,cost=0;co.lines.forEach(l=>{const q=qtyTot(l.qty);qty+=q;amt+=q*num(l.price);cost+=q*num(findStyle(l.devNo).factoryPrice)});return{qty,amt,cost}}
+function poTotals(po){const qty=po.lines.reduce((a,l)=>a+qtyTot(l.qty),0);return{qty,amt:qty*num(po.cost)}}
+const ctns=l=>l.from!==''&&l.to!==''&&l.from!=null&&l.to!=null?Math.max(0,num(l.to)-num(l.from)+1):0;
+function plTotals(pl){const t={ctn:0,prs:0,nw:0,gw:0,cbm:0};pl.lines.forEach(l=>{const c=ctns(l);t.ctn+=c;t.prs+=qtyTot(l.qty)*c;t.nw+=num(l.nw)*c;t.gw+=num(l.gw)*c;t.cbm+=num(l.cbm)*c});return t}
+function invTotals(inv){let qty=0,amt=0;inv.lines.forEach(l=>{qty+=num(l.qty);amt+=num(l.qty)*num(l.price)});return{qty,amt}}
+const paid=co=>(co.payments||[]).reduce((a,p)=>a+num(p.amount),0);
+const deposits=co=>(co.payments||[]).filter(p=>p.type==='訂金').reduce((a,p)=>a+num(p.amount),0);
+const docsOf=(type,f)=>S.docs.filter(d=>d.type===type&&(!f||f(d)));
+function packedBy(coId){const m={};docsOf('PL',d=>d.coId===coId).forEach(pl=>pl.lines.forEach(l=>{const k=l.devNo+'|'+l.color;m[k]=(m[k]||0)+qtyTot(l.qty)*ctns(l)}));return m}
+
+/* =================== 介面基礎 =================== */
+let CALC={};
+const calc=(k,fn)=>{CALC[k]=fn;return `<span data-k="${k}">${fn()}</span>`};
+function refreshCalc(){for(const k in CALC){const e=document.querySelector(`[data-k="${k}"]`);if(e){const v=CALC[k]();if(e.innerHTML!==v)e.innerHTML=v}}}
+function inp(p,o={}){const v=getPath(S,p);return `<input data-p="${esc(p)}" value="${esc(v??'')}" ${o.n?'type="number" step="any" data-n="1"':o.type?`type="${o.type}"`:''} ${o.r?'data-r="1"':''} ${o.list?`list="${o.list}"`:''} ${o.ph?`placeholder="${esc(o.ph)}"`:''} class="${o.cls||''}" style="${o.w?`width:${o.w}px;`:''}${o.st||''}">`}
+function sel(p,opts,o={}){const v=getPath(S,p);return `<select data-p="${p}" ${o.r?'data-r="1"':''} style="${o.w?`width:${o.w}px`:''}">${opts.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return `<option value="${esc(a)}" ${String(a)===String(v??'')?'selected':''}>${esc(b)}</option>`}).join('')}</select>`}
+const ta=(p,h)=>`<textarea data-p="${p}" style="${h?`min-height:${h}px`:''}">${esc(getPath(S,p)??'')}</textarea>`;
+const chk=(p,label)=>`<label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" data-p="${p}" data-r="1" style="width:auto" ${getPath(S,p)?'checked':''}> ${label}</label>`;
+const F=(label,html,cls='')=>`<div class="${cls}"><label>${label}</label>${html}</div>`;
+const RO=(label,v,cls='')=>`<div class="${cls}"><label>${label}</label><input readonly value="${esc(v)}"></div>`;
+const custOpts=()=>[['','— 揀客戶 —'],...S.customers.map(c=>[c.code,c.code+'  '+c.name])];
+const facOpts=()=>[['','— 揀工廠 —'],...S.factories.map(c=>[c.code,c.code+'  '+c.name])];
+const styleOpts=(first='— 揀款號 —')=>[['',first],...S.styles.map(s=>[s.devNo,s.devNo+'  '+(s.name||'')])];
+document.addEventListener('input',e=>{const t=e.target,p=t.dataset.p;if(!p||t.type==='file')return;let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.n)v=v===''?'':+v;setPath(S,p,v);save();if(!t.dataset.r)refreshCalc()});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.p&&t.dataset.r){if(t.dataset.p.endsWith('.cust')&&D&&D.to!==undefined){D.to=findCust(D.cust).dest||D.to}if(t.dataset.p.endsWith('.cust')&&D&&D.type==='CO')D.payment=findCust(D.cust).payment||D.payment;save();setTimeout(render,0)}});
+function resizeImg(file,max=1000){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};im.onerror=()=>res(null);im.src=r.result};r.readAsDataURL(file)})}
+async function addImgs(p,input){const arr=getPath(S,p);for(const f of input.files){const d=await resizeImg(f);if(d)arr.push(d)}save();render()}
+function imgBox(p,title){const arr=getPath(S,p)||[];return `<div class="imgbox">${arr.map((s,k)=>`<div class="im"><img src="${s}"><button class="sm del" onclick="getPath(S,'${p}').splice(${k},1);save();render()">移除</button></div>`).join('')}
+ <label class="addimg">＋ ${title||'加圖片'}<input type="file" accept="image/*" multiple style="display:none" onchange="addImgs('${p}',this)"></label></div>`}
+function ask(msg,ok){const b=document.getElementById('modalBox');b.innerHTML=`<p>${msg}</p><div class="bar" style="justify-content:flex-end;margin:0"><button onclick="closeModal()">取消</button><button class="pri" id="mok">確定</button></div>`;document.getElementById('modal').style.display='flex';document.getElementById('mok').onclick=()=>{closeModal();ok()}}
+function closeModal(){document.getElementById('modal').style.display='none'}
+const badge=(t,c='')=>`<span class="badge ${c}">${esc(t)}</span>`;
+function stageBar(st){const i=stageInfo(st);return `<div class="stg">${(st||[]).map(s=>`<i class="${s.actual?'d':(s.plan&&s.plan<today()?'l':'')}" title="${esc(s.name)}${s.plan?' 計劃 '+s.plan:''}${s.actual?' 完成 '+s.actual:''}"></i>`).join('')}</div><div class="muted">${esc(i.cur)}${i.next?` → 下一步：${esc(i.next.name)}${i.next.plan?' ('+i.next.plan+')':''}`:''}</div>`}
+const thumb=(src,h=44)=>src?`<img src="${src}" style="max-height:${h}px;max-width:${h*1.4}px;display:block;border:1px solid #ddd;background:#fff">`:`<div class="noimg" style="height:${h}px;width:${h*1.4}px">冇圖</div>`;
+const link=(d,label)=>d?`<a href="#${d.type}-${d.id}">${esc(label||d.no)}</a>`:'';
+
+/* =================== 導航 =================== */
+const NAV=[['home','🏠 首頁'],['grp','主流程'],['STY','① 開發款式'],['SD','② 樣板單'],['QT','③ 報價單'],['CO','④ 客人訂單 (PO)'],['PO','⑤ 採購單'],['PL','⑥ Packing List'],['INV','⑦ Invoice'],
+ ['grp','追蹤'],['tsample','樣板追蹤'],['tprod','生產追蹤'],['tpay','收款'],
+ ['grp','可選'],['PI','PI / SC'],
+ ['grp','資料'],['customers','客戶'],['factories','工廠'],['company','公司資料'],['settings','追蹤階段設定'],
+ ['grp','系統'],['backup','備份 / 還原'],['security','🔒 安全設定'],['help','使用說明']];
+let view='home',editing=null,D=null;
+function go(v,id){location.hash=v+(id?'-'+id:'')}
+window.addEventListener('hashchange',route);
+function route(){if(!S)return;const h=decodeURIComponent(location.hash.slice(1));const i=h.indexOf('-');const v=i<0?h:h.slice(0,i),id=i<0?null:h.slice(i+1);
+ view=NAV.some(n=>n[0]===v)?v:'home';editing=id;closePreview(true);render();window.scrollTo(0,0)}
+function render(){CALC={};D=null;
+ document.getElementById('nav').innerHTML='<h1>👟 童鞋貿易<br>辦公室系統</h1><a class="lockbtn" href="javascript:lockNow()">🔒 鎖定</a>'+NAV.map(([k,l])=>k==='grp'?`<div class="grp">${l}</div>`:`<a href="#${k}" class="${view===k?'on':''}">${l}</a>`).join('');
+ const m=document.getElementById('main');let h;
+ if(view==='STY')h=editing?styleEditor():styleList();
+ else if(T[view])h=editing?docEditor():docList(view);
+ else h=({home:homeView,tsample:sampleTrack,tprod:prodTrack,tpay:payTrack,customers:()=>masterView('customers'),factories:()=>masterView('factories'),company:companyView,settings:settingsView,backup:backupView,security:securityView,help:helpView}[view]||homeView)();
+ m.innerHTML=h}
+
+/* =================== ① 開發款式 =================== */
+function styleList(){const q=(styleList.q||'').toLowerCase();
+ const list=S.styles.filter(s=>!q||JSON.stringify([s.devNo,s.custStyle,s.name,s.colors,findCust(s.cust).name]).toLowerCase().includes(q)).sort((a,b)=>(b.created||0)-(a.created||0));
+ return `<h2>① 開發款式</h2><p class="muted">流程第一步：有圖就開一個開發號碼（即正式款號），填生產碼段同顏色。之後樣板單、報價單、訂單、採購單都會由呢度攞圖片同資料。</p>
+ <div class="bar"><button class="pri" onclick="newStyle()">＋ 新開發款式</button><span class="sp"></span><input placeholder="搜尋款號 / 品名 / 客戶…" style="max-width:260px" value="${esc(styleList.q||'')}" oninput="styleList.q=this.value;render();const e=document.querySelector('main .bar input');e.focus();e.setSelectionRange(99,99)"></div>
+ ${list.length?`<div class="cards">${list.map(s=>{const sd=docsOf('SD',d=>d.devNo===s.devNo).sort((a,b)=>b.created-a.created)[0];const ords=docsOf('CO',d=>d.lines.some(l=>l.devNo===s.devNo)).length;
+  return `<a class="scard" href="#STY-${s.id}"><div class="simg">${s.images?.[0]?`<img src="${s.images[0]}">`:'<span>冇圖</span>'}</div><div class="sbody"><b>${esc(s.devNo)}</b>${s.custStyle?` <span class="muted">客款 ${esc(s.custStyle)}</span>`:''}<div>${esc(s.name)}</div><div class="muted">碼段 ${esc(s.sizeRange)} · ${esc(s.colors)}</div><div class="muted">${esc(findCust(s.cust).name||'')}</div><div style="margin-top:4px">${sd?badge('樣板：'+sd.status):badge('未開樣板','grey')} ${ords?badge(ords+' 張訂單','ok'):''}</div></div></a>`}).join('')}</div>`:'<div class="card muted">未有款式。</div>'}`}
+function newStyle(){const s={id:uid(),devNo:nextNo('DEV'),custStyle:'',cust:S.customers[0]?.code||'',name:'',sizeRange:'',colors:'',upper:'',lining:'',sole:'',factory:S.factories[0]?.code||'',factoryPrice:'',sellPrice:'',sampleCost:'',prsCtn:12,nw:'',gw:'',L:'',W:'',H:'',hs:'',note:'',images:[],created:Date.now()};S.styles.push(s);save();go('STY',s.id)}
+function styleEditor(){const s=S.styles.find(x=>x.id===editing);if(!s)return styleList();const P=`styles.${S.styles.indexOf(s)}`;
+ const rel=['SD','QT','CO','PO'].map(t=>{const ds=docsOf(t,d=>d.devNo===s.devNo||(d.lines||[]).some(l=>l.devNo===s.devNo));return ds.length?`<div><b>${T[t].name}：</b>${ds.map(d=>link(d)).join('、')}</div>`:''}).join('');
+ return `<div class="bar"><a href="#STY" class="btn">← 款式列表</a><h2 style="margin:0 8px">${esc(s.devNo)}</h2><span class="sp"></span>
+ <button onclick="flowNew('SD',{devNo:'${esc(s.devNo)}'})">② 開樣板單</button><button onclick="qtFromStyle('${s.id}')">③ 開報價單</button><button class="del" onclick="delStyle('${s.id}')">刪除</button></div>
+ <div class="card"><h3>圖片</h3>${imgBox(P+'.images','上載圖片')}</div>
+ <div class="card"><h3>基本資料</h3><div class="form">
+ ${F('開發號碼 / 款號 *',`<input value="${esc(s.devNo)}" onchange="renameStyle('${s.id}',this)">`)}${F('客人款號（如有）',inp(P+'.custStyle'))}${F('客戶',sel(P+'.cust',custOpts()))}${F('品名 Description',inp(P+'.name',{ph:'例如 Kids Velcro Sneaker'}))}
+ ${F('顏色 *（用逗號分隔）',inp(P+'.colors',{r:1,ph:'例如 Navy, Pink, Black'}),'w2')}
+ <div class="wide muted">顏色：${colorsOf(s.devNo).map(x=>badge(x,'grey')).join(' ')||'—'}</div>
+ ${F('鞋面 Upper',inp(P+'.upper'))}${F('內裡 Lining',inp(P+'.lining'))}${F('鞋底 Sole',inp(P+'.sole'))}${F('HS Code',inp(P+'.hs'))}
+ </div></div>
+ ${sizePicker(s)}
+ <div class="card"><h3>價錢</h3><div class="form">${F('工廠',sel(P+'.factory',facOpts()))}${F('工廠價（成本）',inp(P+'.factoryPrice',{n:1}))}${F('報價 / 售價',inp(P+'.sellPrice',{n:1}))}${F('樣板費',inp(P+'.sampleCost'))}</div>
+ <p class="muted">毛利率：${calc('sm',()=>{const a=num(s.sellPrice),b=num(s.factoryPrice);return a&&b?pct(a-b,a):'—'})}</p></div>
+ <div class="card"><h3>包裝資料（Packing List 用）</h3><div class="form">${F('每箱雙數',inp(P+'.prsCtn',{n:1}))}${F('每箱淨重 kg',inp(P+'.nw',{n:1}))}${F('每箱毛重 kg',inp(P+'.gw',{n:1}))}${F('外箱長 cm',inp(P+'.L',{n:1}))}${F('外箱闊 cm',inp(P+'.W',{n:1}))}${F('外箱高 cm',inp(P+'.H',{n:1}))}<div><label>每箱 CBM</label><div style="padding:6px 0">${calc('cbm',()=>cbmOf(s)||'—')}</div></div></div>
+ <div class="form" style="margin-top:10px">${F('備註',ta(P+'.note'),'wide')}</div></div>
+ ${rel?`<div class="card"><h3>相關單據</h3>${rel}</div>`:''}`}
+function renameStyle(id,el){const s=S.styles.find(x=>x.id===id);const old=s.devNo,nw=el.value.trim();if(!nw||nw===old){el.value=old;return}
+ if(S.styles.some(x=>x.devNo===nw&&x.id!==id)){toast('款號 '+nw+' 已經存在');el.value=old;return}
+ s.devNo=nw;S.docs.forEach(d=>{if(d.devNo===old)d.devNo=nw;(d.lines||[]).forEach(l=>{if(l.devNo===old)l.devNo=nw})});save();toast('款號已改為 '+nw+'（相關單據已同步）');render()}
+function sizePicker(s){const cur=styleSizes(s);const sys=sizePicker.sys||(cur.some(z=>/[CY]$/i.test(z))?'US':cur.some(z=>z.includes('.'))||!cur.length?'CM':'EU');const Y=SIZE_SYS[sys];const id=s.id;
+ const opts=(Y?Y.list:[]).map(z=>`<option ${z===sizePicker.from?'selected':''}>${z}</option>`);
+ return `<div class="card"><h3>生產碼段 *</h3>
+ <div class="bar">碼制 <select style="width:auto" onchange="sizePicker.sys=this.value;sizePicker.from=sizePicker.to=null;render()">${Object.entries(SIZE_SYS).map(([k,v])=>`<option value="${k}" ${k===sys?'selected':''}>${v.label}</option>`).join('')}<option value="X" ${sys==='X'?'selected':''}>自訂（自己打）</option></select>
+ ${Y&&Y.steps?`<span class="sp" style="flex:0 0 12px"></span>快速揀：由 <select id="sz_from" style="width:auto">${Y.list.map((z,i)=>`<option ${i===(sys==='CM'?10:5)?'selected':''}>${z}</option>`).join('')}</select> 至 <select id="sz_to" style="width:auto">${Y.list.map((z,i)=>`<option ${i===(sys==='CM'?22:15)?'selected':''}>${z}</option>`).join('')}</select> 每 <select id="sz_step" style="width:auto">${Y.steps.map(x=>`<option value="${x}">${x.toFixed(1)}</option>`).join('')}</select> <button onclick="applySizeRange('${id}','${sys}')">套用</button>`:''}</div>
+ ${Y?`<p class="muted" style="margin:4px 0">㩒一下揀 / 取消揀：</p><div class="chips">${Y.list.map(z=>`<span class="chip ${cur.includes(z)?'on':''}" onclick="toggleSize('${id}','${z}')">${z}</span>`).join('')}</div>`:''}
+ <div class="bar" style="margin-top:10px">自己打碼數 <input id="sz_custom" style="max-width:320px" placeholder="例如 13.5 或 14.0-16.0 或 2C, 3C" onkeydown="if(event.key==='Enter')addCustomSize('${id}')"><button onclick="addCustomSize('${id}')">加入</button></div>
+ <div style="margin-top:8px"><b>已揀 ${cur.length} 個碼：</b>${cur.length?cur.map(z=>`<span class="chip on sel">${esc(z)}<i onclick="toggleSize('${id}',this.parentNode.dataset.z)">✕</i></span>`.replace('class="chip on sel"',`class="chip on sel" data-z="${esc(z)}"`)).join(''):'<span class="warn">未揀碼段</span>'} ${cur.length?`<button class="sm del" onclick="setSizes('${id}',[])">全部清除</button>`:''}</div></div>`}
+function setSizes(id,arr){const s=S.styles.find(x=>x.id===id);s.sizes=sortSizes(arr.map(z=>String(z).trim()).filter(Boolean));s.sizeRange=sizeSummary(s.sizes);save();render()}
+function toggleSize(id,z){const s=S.styles.find(x=>x.id===id);const cur=[...styleSizes(s)];const i=cur.indexOf(z);if(i>=0)cur.splice(i,1);else cur.push(z);setSizes(id,cur)}
+function applySizeRange(id,sys){const Y=SIZE_SYS[sys];let a=+document.getElementById('sz_from').value,b=+document.getElementById('sz_to').value,st=+document.getElementById('sz_step').value;if(a>b)[a,b]=[b,a];
+ const out=[];for(let x=a;x<=b+1e-9;x+=st)out.push(Y.fmt(x));const s=S.styles.find(x=>x.id===id);setSizes(id,[...styleSizes(s),...out]);toast(`已加入 ${out[0]} 至 ${out[out.length-1]}`)}
+function addCustomSize(id){const v=document.getElementById('sz_custom').value.trim();if(!v)return;const add=v.split(/[,，、;]+/).flatMap(x=>parseRange(x.trim()));const s=S.styles.find(x=>x.id===id);setSizes(id,[...styleSizes(s),...add]);toast('已加入 '+add.join(', '))}
+function delStyle(id){const s=S.styles.find(x=>x.id===id);ask(`確定刪除款式 ${esc(s.devNo)}？（相關單據唔會刪除）`,()=>{S.styles=S.styles.filter(x=>x.id!==id);save();go('STY')})}
+
+/* =================== 單據列表 =================== */
+function docSummary(d){
+ if(d.type==='SD')return [esc(d.devNo),esc(findFac(d.fac).name||''),esc(d.stype),stageBar(d.stages),badge(d.status)];
+ if(d.type==='QT')return [esc(findCust(d.cust).name||''),d.lines.map(l=>esc(l.devNo)).join(', '),badge(d.status)];
+ if(d.type==='CO'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),`<b>${esc(d.custPO)}</b>`,f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt),esc(d.etd),badge(d.status)]}
+ if(d.type==='PO'){const t=poTotals(d);return [esc(d.devNo),esc(findFac(d.fac).name||''),esc(d.custPO),f0(t.qty)+' 雙',esc(d.delivery),stageBar(d.stages)]}
+ if(d.type==='PL'){const t=plTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),t.ctn+' 箱',f0(t.prs)+' 雙']}
+ if(d.type==='INV'){const t=invTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt)]}
+ if(d.type==='PI'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',curOf(d)+' '+f2(t.amt)]}}
+const HEADS={SD:['款號','工廠','類型','進度','狀態'],QT:['客戶','款號','狀態'],CO:['客戶','客人PO號','雙數','金額','ETD','狀態'],PO:['款號','工廠','客人PO號','雙數','交貨期','生產進度'],PL:['客戶','客人PO號','箱數','雙數'],INV:['客戶','客人PO號','雙數','金額'],PI:['客戶','客人PO號','雙數','金額']};
+const INTRO={SD:'揀開發款式開樣板單俾工廠，圖片同資料會自動帶入。每張樣板單都有自己嘅進度追蹤。',QT:'樣板完成之後，開報價單俾客人。可以喺開發款式或者樣板單入面一㩒開。',CO:'客人確認報價之後會落 PO 俾你，喺呢度輸入每個顏色、每個碼嘅數量。之後一㩒就可以生成採購單（每款一張）。',PO:'採購單由客人訂單生成，每款一張，用工廠價。每張都有生產進度追蹤。',PL:'生產完成後，由客人訂單開 Packing List。',INV:'由 Packing List 一㩒開 Invoice，向客人收款。',PI:'（可選）有啲客人要 PI 先肯落訂金，可以由客人訂單開。'};
+function docList(type){const docs=docsOf(type).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
+ const canNew={SD:1,QT:1,CO:1}[type];
+ return `<h2>${NAV.find(n=>n[0]===type)[1]}</h2><p class="muted">${INTRO[type]}</p><div class="bar">${canNew?`<button class="pri" onclick="flowNew('${type}')">＋ 新增${T[type].name}</button>`:''}<span class="sp"></span><input placeholder="搜尋…" style="max-width:240px" oninput="filterRows(this.value)"></div>
+ ${docs.length?`<div class="scroll"><table class="list" id="lt"><tr><th>單號</th><th>日期</th>${HEADS[type].map(h=>`<th>${h}</th>`).join('')}<th></th></tr>
+ ${docs.map(d=>`<tr><td><a href="#${type}-${d.id}"><b>${esc(d.no)}</b></a></td><td>${esc(d.date)}</td>${docSummary(d).map(x=>`<td>${x}</td>`).join('')}
+ <td style="white-space:nowrap;text-align:right"><button class="sm" onclick="preview('${d.id}')">列印</button> <button class="sm" onclick="dupDoc('${d.id}')">複製</button> <button class="sm del" onclick="delDoc('${d.id}')">刪除</button></td></tr>`).join('')}</table></div>`:`<div class="card muted">未有${T[type].name}。</div>`}`}
+function filterRows(q){q=q.toLowerCase();document.querySelectorAll('#lt tr:not(:first-child)').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')}
+function flowNew(type,extra){const d=newDoc(type,extra||{});if(type==='QT'&&extra&&extra.devNo){}S.docs.push(d);save();go(type,d.id)}
+function dupDoc(id){const o=docById(id);const d=JSON.parse(JSON.stringify(o));d.id=uid();d.no=nextNo(T[o.type].prefix);d.date=today();d.created=Date.now();if(d.stages)d.stages.forEach(s=>{s.actual='';s.plan=''});if(d.payments)d.payments=[];S.docs.push(d);save();toast('已複製做 '+d.no);go(o.type,d.id)}
+function delDoc(id){const d=docById(id);ask(`確定刪除 ${esc(d.no)}？刪除後無法復原。`,()=>{S.docs=S.docs.filter(x=>x.id!==id);save();go(d.type)})}
+
+/* =================== 流程轉單 =================== */
+function qtFromStyle(sid){const s=S.styles.find(x=>x.id===sid);const d=newDoc('QT',{cust:s.cust||S.customers[0]?.code||''});d.lines=[{devNo:s.devNo,colors:s.colors,moq:'',price:s.sellPrice??'',rem:''}];S.docs.push(d);save();toast('已開報價單 '+d.no);go('QT',d.id)}
+function qtFromSD(id){const sd=docById(id);const s=findStyle(sd.devNo);if(sd.reply.bulk&&!s.factoryPrice)s.factoryPrice=num(sd.reply.bulk);const d=newDoc('QT',{cust:sd.cust});d.lines=[{devNo:sd.devNo,colors:sd.colors||s.colors,moq:sd.reply.moq||'',price:s.sellPrice??'',rem:''}];S.docs.push(d);save();toast('已開報價單 '+d.no);go('QT',d.id)}
+function replyToStyle(id){const sd=docById(id);const s=findStyle(sd.devNo);if(!s.devNo)return toast('搵唔到款式');if(sd.reply.bulk!=='')s.factoryPrice=num(sd.reply.bulk);if(sd.reply.cost!=='')s.sampleCost=sd.reply.cost;save();toast(`已將工廠價 ${sd.reply.bulk||'-'} 記入 ${s.devNo}`)}
+function coFromQT(id){const q=docById(id);const d=newDoc('CO',{cust:q.cust,qtId:q.id,payment:findCust(q.cust).payment||''});
+ q.lines.forEach(l=>{const cols=String(l.colors||'').split(/[,/、]+/).map(x=>x.trim()).filter(Boolean);(cols.length?cols:['']).forEach(c=>d.lines.push({devNo:l.devNo,color:c,qty:{},price:l.price}))});
+ q.status='客人已確認';S.docs.push(d);save();toast('已開客人訂單 '+d.no+'，請輸入客人 PO 號同數量');go('CO',d.id)}
+function genPOs(id){const co=docById(id);const styles=[...new Set(co.lines.map(l=>l.devNo).filter(Boolean))];let made=[],skip=[];
+ styles.forEach(dn=>{if(docsOf('PO',p=>p.coId===co.id&&p.devNo===dn).length){skip.push(dn);return}const s=findStyle(dn);
+  const p=newDoc('PO',{fac:s.factory||'',coId:co.id,devNo:dn,custPO:co.custPO,delivery:co.etd,cost:s.factoryPrice??''});
+  p.lines=co.lines.filter(l=>l.devNo===dn).map(l=>({color:l.color,qty:{...l.qty}}));p.req.pack=`每對入彩盒，每箱 ${s.prsCtn||12} 對`;S.docs.push(p);made.push(p.no)});
+ save();render();toast(made.length?`已生成 ${made.length} 張採購單：${made.join('、')}`:'')
+ if(skip.length)setTimeout(()=>toast(`${skip.join('、')} 已經有採購單，冇重複生成`),made.length?2600:0)}
+function plFromCO(id,onlyDev){const co=docById(id);const d=newDoc('PL',{cust:co.cust,coId:co.id,custPO:co.custPO});d.to=findCust(co.cust).dest||'';let c=1;
+ const packed=packedBy(co.id);
+ co.lines.filter(l=>l.devNo&&(!onlyDev||l.devNo===onlyDev)).forEach(l=>{const s=findStyle(l.devNo);const total=qtyTot(l.qty)-(packed[l.devNo+'|'+l.color]||0);if(total<=0)return;const per=num(s.prsCtn)||12;const k=Math.ceil(total/per);
+  d.lines.push({from:c,to:c+k-1,devNo:l.devNo,color:l.color,qty:{},nw:s.nw??'',gw:s.gw??'',cbm:cbmOf(s)});c+=k});
+ if(!d.lines.length)return toast('呢張訂單已經全部入咗 Packing List');
+ S.docs.push(d);save();toast('已開 Packing List '+d.no+'，請填每箱每碼雙數');go('PL',d.id)}
+function invFromPL(id){const pl=docById(id);const ex=docsOf('INV',x=>x.plId===pl.id)[0];if(ex){toast('呢張 Packing List 已經有 Invoice');return go('INV',ex.id)}
+ const co=docById(pl.coId);const d=newDoc('INV',{no:pl.no,date:pl.date,cust:pl.cust,coId:pl.coId,plId:pl.id,custPO:pl.custPO,from:pl.from,to:pl.to,vessel:pl.vessel});
+ const m={};pl.lines.forEach(l=>{if(!l.devNo)return;const k=l.devNo+'|'+l.color;const cl=co?.lines.find(x=>x.devNo===l.devNo&&x.color===l.color)||co?.lines.find(x=>x.devNo===l.devNo);m[k]=m[k]||{devNo:l.devNo,color:l.color,qty:0,price:cl?cl.price:(findStyle(l.devNo).sellPrice??'')};m[k].qty+=qtyTot(l.qty)*ctns(l)});
+ d.lines=Object.values(m);d.lessDeposit=!!(co&&deposits(co));S.docs.push(d);save();toast('已開 Invoice '+d.no);go('INV',d.id)}
+function piFromCO(id){const co=docById(id);const d=newDoc('PI',{cust:co.cust,coId:co.id,custPO:co.custPO,etd:co.etd});d.lines=JSON.parse(JSON.stringify(co.lines));S.docs.push(d);save();go('PI',d.id)}
+
+/* =================== 編輯：共用 =================== */
+function topBar(btns){return `<div class="bar"><a class="btn" href="#${D.type}">← ${T[D.type].name}列表</a><h2 style="margin:0 8px">${esc(D.no)}</h2><span class="sp"></span>${btns||''}<button class="pri" onclick="preview('${D.id}')">🖨 預覽 / 列印</button></div>`}
+function stagesCard(P,title){return `<div class="card"><h3>${title}</h3><p class="muted">填「計劃日期」做目標，完成咗就填「實際完成」。過咗計劃日期都未完成會標紅。</p><table class="grid"><tr><th>階段</th><th>計劃日期</th><th>實際完成</th><th>備註</th><th></th></tr>
+ ${getPath(S,P).map((s,k)=>`<tr class="${!s.actual&&s.plan&&s.plan<today()?'late':''}"><td>${inp(`${P}.${k}.name`,{w:130,st:'background:#fff;color:#000;font-weight:bold'})}</td><td>${inp(`${P}.${k}.plan`,{type:'date',r:1})}</td><td>${inp(`${P}.${k}.actual`,{type:'date',r:1})}</td><td>${inp(`${P}.${k}.note`,{w:220})}</td><td><button class="sm del" onclick="getPath(S,'${P}').splice(${k},1);save();render()">✕</button></td></tr>`).join('')}</table>
+ <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="getPath(S,'${P}').push({name:'',plan:'',actual:'',note:''});save();render()">＋ 加階段</button><button class="sm" onclick="todayNext('${P}')">✓ 下一個階段今日完成</button></div></div>`}
+function todayNext(P){const n=getPath(S,P).find(s=>!s.actual);if(n){n.actual=today();save();render();toast(n.name+' 已完成')}}
+// 顏色 × 碼數 矩陣（按款分組）
+function matrixEditor(P,lines,opt){// opt:{group:true(多款), price:'line'|'none', priceLabel}
+ const groups=[...new Set(lines.map(l=>l.devNo||opt.devNo||''))];let h='';
+ groups.forEach(dn=>{const sizes=sizesOf(dn);const idxs=lines.map((l,i)=>[l,i]).filter(([l])=>(l.devNo||opt.devNo||'')===dn);const s=findStyle(dn);
+  h+=`<div class="mgroup">${opt.group?`<div class="mhead">${thumb(imgOf(dn),40)}<div><b>${esc(dn)}</b> ${esc(s.name||'')} ${s.custStyle?`<span class="muted">客款 ${esc(s.custStyle)}</span>`:''}<div class="muted">碼段 ${esc(s.sizeRange||'')}</div></div><span class="sp"></span><button class="sm" onclick="addColorRow('${P}','${esc(dn)}')">＋ 加顏色</button><button class="sm del" onclick="rmStyleRows('${P}','${esc(dn)}')">刪除呢款</button></div>`:''}
+  <div class="scroll"><table class="grid"><tr><th>顏色</th>${sizes.map(z=>`<th>${esc(z)}</th>`).join('')}<th>合計</th>${opt.price==='line'?`<th>${opt.priceLabel||'單價'}</th><th>金額</th>`:''}<th></th></tr>
+  ${idxs.map(([l,i])=>`<tr><td>${inp(`${P}.${i}.color`,{w:100,list:'cl-'+dn})}</td>${sizes.map(z=>`<td>${inp(`${P}.${i}.qty[${z}]`,{n:1,cls:'sz'})}</td>`).join('')}<td class="c">${calc(`rt${i}`,()=>f0(qtyTot(getPath(S,P)[i]?.qty)))}</td>
+   ${opt.price==='line'?`<td>${inp(`${P}.${i}.price`,{n:1,w:70})}</td><td class="c">${calc(`ra${i}`,()=>{const l=getPath(S,P)[i];return l?f2(qtyTot(l.qty)*num(l.price)):''})}</td>`:''}<td><button class="sm del" onclick="getPath(S,'${P}').splice(${i},1);save();render()">✕</button></td></tr>`).join('')}
+  <tr class="tot"><td>小計</td>${sizes.map(z=>`<td class="c">${calc(`gz${dn}${z}`,()=>{const v=getPath(S,P).filter(l=>(l.devNo||opt.devNo||'')===dn).reduce((a,l)=>a+num(l.qty?.[z]),0);return v?f0(v):''})}</td>`).join('')}<td class="c">${calc(`gt${dn}`,()=>f0(getPath(S,P).filter(l=>(l.devNo||opt.devNo||'')===dn).reduce((a,l)=>a+qtyTot(l.qty),0)))}</td>${opt.price==='line'?'<td></td><td></td>':''}<td></td></tr></table></div>
+  <datalist id="cl-${esc(dn)}">${colorsOf(dn).map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>`});
+ return h}
+function addColorRow(P,dn){const arr=getPath(S,P);const used=arr.filter(l=>l.devNo===dn).map(l=>l.color);const c=colorsOf(dn).find(x=>!used.includes(x))||'';const base=arr.find(l=>l.devNo===dn);arr.push({devNo:dn,color:c,qty:{},price:base?.price??findStyle(dn).sellPrice??''});save();render()}
+function rmStyleRows(P,dn){ask(`刪除 ${esc(dn)} 全部顏色？`,()=>{const arr=getPath(S,P);for(let i=arr.length-1;i>=0;i--)if(arr[i].devNo===dn)arr.splice(i,1);save();render()})}
+function addStyleRows(P,dn){if(!dn)return;const arr=getPath(S,P);const s=findStyle(dn);const cols=colorsOf(dn);(cols.length?cols:['']).forEach(c=>arr.push({devNo:dn,color:c,qty:{},price:s.sellPrice??''}));save();render()}
+const addStyleSel=(P,label='＋ 加款式')=>`<select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="addStyleRows('${P}',this.value)">${styleOpts(label).map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select>`;
+
+/* =================== 編輯：各單據 =================== */
+function docEditor(){D=docById(editing);if(!D)return docList(view);const P=`docs.${S.docs.indexOf(D)}`;return ({SD:sdEditor,QT:qtEditor,CO:coEditor,PO:poEditor,PL:plEditor,INV:invEditor,PI:piEditor})[D.type](P)}
+function custFields(P){const c=findCust(D.cust);return F('客戶',sel(P+'.cust',custOpts(),{r:1}))+RO('聯絡人 / 付款條款',(c.attn||'')+(c.payment?' / '+c.payment:''))}
+function sdEditor(P){const s=findStyle(D.devNo);
+ return topBar(`<button onclick="replyToStyle('${D.id}')">工廠價記入款式</button><button onclick="qtFromSD('${D.id}')">③ 開報價單俾客人</button>`)+
+ `<div class="card"><div class="form">${F('樣板單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('開發款號 *',sel(P+'.devNo',styleOpts(),{r:1}))}${F('工廠',sel(P+'.fac',facOpts()))}${F('客戶',sel(P+'.cust',custOpts()))}
+ ${F('樣板類型',sel(P+'.stype',SAMPLE_TYPES))}${F('數量',inp(P+'.qty'))}${F('樣板碼數',inp(P+'.sampleSize',{ph:'例如 EU 30 左右腳'}))}${F('顏色',inp(P+'.colors'))}${F('要求交樣日',inp(P+'.due',{type:'date'}))}
+ ${F('狀態',sel(P+'.status',SAMPLE_STATUS))}${F('速遞單號',inp(P+'.courier'))}${F('客人意見',inp(P+'.feedback'),'wide')}</div></div>
+ <div class="card"><h3>圖片</h3>${s.images?.length?`<p class="muted">由開發款式 ${esc(s.devNo)} 帶入：</p><div class="imgbox">${s.images.map(x=>`<div class="im"><img src="${x}"></div>`).join('')}</div>`:''}<p class="muted">另加圖片（只限呢張樣板單）：</p>${imgBox(P+'.images')}</div>
+ <div class="card"><h3>物料規格</h3><table class="grid" style="width:100%"><tr><th>部位</th><th>物料 Material</th><th>顏色 Color</th><th>備註</th></tr>${D.parts.map((p,k)=>`<tr><td>${inp(`${P}.parts.${k}.part`,{st:'background:#fff;color:#000;font-weight:bold'})}</td><td>${inp(`${P}.parts.${k}.mat`)}</td><td>${inp(`${P}.parts.${k}.color`)}</td><td>${inp(`${P}.parts.${k}.rem`)}</td></tr>`).join('')}</table>
+ <div class="form" style="margin-top:10px">${F('特別要求',ta(P+'.special'),'wide')}</div></div>
+ <div class="card"><h3>工廠回覆</h3><div class="form">${[['樣板費','cost'],['大貨價（工廠價）','bulk'],['開模費','mould'],['生產期','lead'],['MOQ','moq'],['實際交樣日','delivered']].map(([l,k])=>F(l,inp(`${P}.reply.${k}`,{type:k==='delivered'?'date':''}))).join('')}</div><p class="muted">填好大貨價之後，㩒上面「工廠價記入款式」，報價單就會用呢個價計毛利。</p></div>
+ ${stagesCard(P+'.stages','樣板追蹤')}`}
+function qtEditor(P){return topBar(`<button onclick="coFromQT('${D.id}')">✓ 客人確認 → ④ 輸入客人 PO</button>`)+
+ `<div class="card"><div class="form">${F('報價單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('有效期至',inp(P+'.valid',{type:'date'}))}${RO('貨幣 / 價格條款',curOf(D)+' / '+priceTerm(D))}${F('狀態',sel(P+'.status',['等客人回覆','客人已確認','需重新報價','冇落單']))}
+ ${F('交貨期 Lead Time',inp(P+'.leadTime'),'wide')}${F('包裝 Packing',inp(P+'.packing'),'wide')}${F('樣板 Sample',inp(P+'.sample'),'wide')}${F('備註 Remarks',inp(P+'.remarks'),'wide')}</div></div>
+ <div class="card"><h3>報價款式</h3><div class="scroll"><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>碼段</th><th>顏色</th><th>MOQ (雙)</th><th>報價</th><th>工廠價</th><th>毛利率</th><th>備註</th><th></th></tr>
+ ${D.lines.map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td>${thumb(imgOf(l.devNo),40)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(s.name||'')}</td><td class="c">${esc(s.sizeRange||'')}</td><td>${inp(`${P}.lines.${i}.colors`,{w:150})}</td><td>${inp(`${P}.lines.${i}.moq`,{n:1,w:70})}</td><td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${s.factoryPrice!==''&&s.factoryPrice!=null?f2(s.factoryPrice):'—'}</td><td class="c">${calc('m'+i,()=>{const l2=D.lines[i];const a=num(l2?.price),b=num(findStyle(l2?.devNo).factoryPrice);return a&&b?pct(a-b,a):'—'})}</td><td>${inp(`${P}.lines.${i}.rem`,{w:160})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`}).join('')}</table></div>
+ <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){const s=findStyle(this.value);D.lines.push({devNo:s.devNo,colors:s.colors,moq:'',price:s.sellPrice??'',rem:''});save();render()}">${styleOpts('＋ 加款式').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select><span class="muted">工廠價同毛利率只會喺呢度顯示，唔會印出嚟。</span></div></div>`}
+function coEditor(P){const t=coTotals(D);const pos=docsOf('PO',p=>p.coId===D.id),pls=docsOf('PL',p=>p.coId===D.id),invs=docsOf('INV',p=>p.coId===D.id),pis=docsOf('PI',p=>p.coId===D.id);const qt=docById(D.qtId);
+ const packed=packedBy(D.id);
+ return topBar(`<button onclick="genPOs('${D.id}')">⑤ 生成採購單（每款一張）</button><button onclick="plFromCO('${D.id}')">⑥ 開 Packing List</button><button onclick="piFromCO('${D.id}')">開 PI（可選）</button>`)+
+ `<div class="card"><div class="form">${F('客人 PO 號 *',inp(P+'.custPO',{ph:'客人張 PO 嘅號碼'}))}${F('收單日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('交貨期 ETD',inp(P+'.etd',{type:'date'}))}${F('付款條款',inp(P+'.payment'),'w2')}${F('狀態',sel(P+'.status',['進行中','已出貨','已完成','已取消']))}${F('內部訂單號',inp(P+'.no'))}${qt?RO('來自報價單',qt.no):''}${F('備註',inp(P+'.note'),'wide')}</div></div>
+ <div class="card"><h3>訂單明細（顏色 × 碼數）</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:'line',priceLabel:'客人價'})}
+ <div class="bar" style="margin:8px 0 0">${addStyleSel(P+'.lines')}</div>
+ <div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b>　毛利 <b>${calc('cg',()=>{const x=coTotals(D);return f2(x.amt-x.cost)+' ('+(pct(x.amt-x.cost,x.amt)||'—')+')'})}</b></div></div>
+ <div class="card"><h3>進度總覽</h3><table class="list"><tr><th>款號</th><th>顏色</th><th>訂單雙數</th><th>採購單</th><th>生產進度</th><th>已裝箱</th></tr>
+ ${D.lines.filter(l=>l.devNo).map(l=>{const po=pos.find(p=>p.devNo===l.devNo);const pk=packed[l.devNo+'|'+l.color]||0;const q=qtyTot(l.qty);return `<tr><td>${esc(l.devNo)}</td><td>${esc(l.color)}</td><td>${f0(q)}</td><td>${po?link(po):'<span class="muted">未開</span>'}</td><td>${po?stageBar(po.stages):''}</td><td class="${pk&&pk!==q?'warn':''}">${f0(pk)}${pk===q&&q?' ✓':''}</td></tr>`}).join('')}</table>
+ <div style="margin-top:8px">${pls.length?'<b>Packing List：</b>'+pls.map(x=>link(x)).join('、')+'　':''}${invs.length?'<b>Invoice：</b>'+invs.map(x=>link(x)).join('、')+'　':''}${pis.length?'<b>PI：</b>'+pis.map(x=>link(x)).join('、'):''}</div></div>
+ <div class="card"><h3>收款記錄（可選）</h3><table class="grid"><tr><th>日期</th><th>類型</th><th>金額</th><th>備註</th><th></th></tr>${(D.payments||[]).map((p,k)=>`<tr><td>${inp(`${P}.payments.${k}.date`,{type:'date'})}</td><td>${sel(`${P}.payments.${k}.type`,PAY_TYPES)}</td><td>${inp(`${P}.payments.${k}.amount`,{n:1,w:110})}</td><td>${inp(`${P}.payments.${k}.note`,{w:220})}</td><td><button class="sm del" onclick="D.payments.splice(${k},1);save();render()">✕</button></td></tr>`).join('')}</table>
+ <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="(D.payments=D.payments||[]).push({date:today(),type:D.payments.length?'尾數':'訂金',amount:'',note:''});save();render()">＋ 記錄收款</button><span>訂單金額 ${f2(t.amt)} · 已收 <b>${calc('pd',()=>f2(paid(D)))}</b> · 未收 <b class="warn">${calc('pu',()=>f2(coTotals(D).amt-paid(D)))}</b></span></div></div>`}
+function poEditor(P){const s=findStyle(D.devNo);const co=docById(D.coId);const fa=findFac(D.fac);
+ return topBar(co?`<button onclick="plFromCO('${co.id}','${esc(D.devNo)}')">⑥ 開 Packing List（呢款）</button>`:'')+
+ `<div class="card"><div class="form">${F('採購單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('工廠',sel(P+'.fac',facOpts(),{r:1}))}${RO('工廠付款條款',fa.payment||'')}${F('客人 PO 號',inp(P+'.custPO'))}${co?`<div><label>來自客人訂單</label><div style="padding:6px 0">${link(co,co.custPO||co.no)}</div></div>`:''}${F('交貨期',inp(P+'.delivery',{type:'date'}))}${F('工廠單價',inp(P+'.cost',{n:1}))}</div></div>
+ <div class="card"><div class="mhead">${thumb(imgOf(D.devNo),70)}<div><b style="font-size:16px">${esc(D.devNo)}</b> ${esc(s.name||'')}<div class="muted">${s.custStyle?'客款 '+esc(s.custStyle)+' · ':''}碼段 ${esc(s.sizeRange||'')} · 鞋面 ${esc(s.upper||'')} · 內裡 ${esc(s.lining||'')} · 鞋底 ${esc(s.sole||'')}</div></div></div>
+ ${matrixEditor(P+'.lines',D.lines,{devNo:D.devNo,price:'none'})}<div class="bar" style="margin:8px 0 0"><button class="sm" onclick="D.lines.push({color:'',qty:{}});save();render()">＋ 加顏色</button></div>
+ <div class="totline">總雙數 <b>${calc('pt',()=>f0(poTotals(D).qty))}</b>　總金額 <b>${calc('pa',()=>f2(poTotals(D).amt))}</b></div></div>
+ <div class="card"><h3>生產要求</h3><div class="form">${[['物料 Material','mat'],['包裝 Packing','pack'],['嘜頭 Shipping Mark','mark'],['質量 Quality','qc'],['驗貨 Inspection','insp'],['備註 Remarks','rem']].map(([l,k])=>F(l,inp(`${P}.req.${k}`),'wide')).join('')}</div></div>
+ ${stagesCard(P+'.stages','生產追蹤')}`}
+function plEditor(P){const co=docById(D.coId);const t=plTotals(D);
+ const check=co?()=>{const pk=packedBy(co.id);return co.lines.filter(l=>l.devNo).map(l=>{const q=qtyTot(l.qty),p=pk[l.devNo+'|'+l.color]||0;return `<tr><td>${esc(l.devNo)}</td><td>${esc(l.color)}</td><td>${f0(q)}</td><td>${f0(p)}</td><td class="${p!==q?'warn':''}">${p===q?'✓':(p-q>0?'+':'')+f0(p-q)}</td></tr>`}).join('')}:null;
+ return topBar(`<button onclick="invFromPL('${D.id}')">⑦ 開 Invoice</button>`)+
+ `<div class="card"><div class="form">${F('Invoice No.（PL 同 Invoice 同一個號）',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('From',inp(P+'.from'))}${F('To',inp(P+'.to'))}${F('Vessel / Voy.',inp(P+'.vessel'))}${co?`<div><label>來自客人訂單</label><div style="padding:6px 0">${link(co,co.custPO||co.no)}</div></div>`:''}${F('嘜頭 Shipping Marks',ta(P+'.marks'),'wide')}</div></div>
+ <div class="card"><h3>裝箱明細</h3><p class="muted">每行 = 一組相同裝法嘅箱。填箱號由 / 至，同埋<b>每一箱</b>入面每個碼幾多雙。</p>
+ ${D.lines.map((l,i)=>{const sizes=sizesOf(l.devNo);const LP=`${P}.lines.${i}`;return `<div class="plrow"><div class="plh">
+  <span>箱號 ${inp(LP+'.from',{n:1,w:60})} 至 ${inp(LP+'.to',{n:1,w:60})} = <b>${calc('pc'+i,()=>ctns(D.lines[i]||{}))}</b> 箱</span>
+  <span>款號 ${sel(LP+'.devNo',styleOpts(),{r:1,w:150})}</span><span>顏色 ${inp(LP+'.color',{w:90,list:'cl-'+l.devNo})}</span>
+  <span>淨重/箱 ${inp(LP+'.nw',{n:1,w:55})}</span><span>毛重/箱 ${inp(LP+'.gw',{n:1,w:55})}</span><span>CBM/箱 ${inp(LP+'.cbm',{n:1,w:65})}</span>
+  <button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></div>
+  <table class="grid"><tr><th>每箱每碼</th>${sizes.map(z=>`<th>${esc(z)}</th>`).join('')}<th>每箱雙數</th><th>總雙數</th></tr><tr><td class="c">雙數</td>${sizes.map(z=>`<td>${inp(`${LP}.qty[${z}]`,{n:1,cls:'sz'})}</td>`).join('')}<td class="c">${calc('pq'+i,()=>f0(qtyTot(D.lines[i]?.qty)))}</td><td class="c"><b>${calc('pp'+i,()=>{const x=D.lines[i];return x?f0(qtyTot(x.qty)*ctns(x)):''})}</b></td></tr></table>
+  <datalist id="cl-${esc(l.devNo)}">${colorsOf(l.devNo).map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>`}).join('')}
+ <div class="bar" style="margin:8px 0 0"><button onclick="addPLLine()">＋ 加一組箱</button></div>
+ <div class="totline">總箱數 <b>${calc('tc',()=>plTotals(D).ctn)}</b>　總雙數 <b>${calc('tp',()=>f0(plTotals(D).prs))}</b>　淨重 <b>${calc('tn',()=>f1(plTotals(D).nw))}</b> kg　毛重 <b>${calc('tg',()=>f1(plTotals(D).gw))}</b> kg　<b>${calc('tm',()=>f3(plTotals(D).cbm))}</b> CBM</div></div>
+ ${co?`<div class="card"><h3>同客人訂單核對</h3><p class="muted">計埋呢張客人訂單所有 Packing List</p>${calc('plchk',()=>`<table class="list"><tr><th>款號</th><th>顏色</th><th>訂單雙數</th><th>已裝箱</th><th>差異</th></tr>${check()}</table>`)}</div>`:''}`}
+function addPLLine(){const last=D.lines[D.lines.length-1];const dn=last?.devNo||'';const s=findStyle(dn);D.lines.push({from:last&&last.to!==''?num(last.to)+1:1,to:'',devNo:dn,color:'',qty:{},nw:s.nw??'',gw:s.gw??'',cbm:cbmOf(s)});save();render()}
+function invEditor(P){const pl=docById(D.plId);const co=docById(D.coId);const t=invTotals(D);
+ return topBar('')+`<div class="card"><div class="form">${F('Invoice No.',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('From',inp(P+'.from'))}${F('To',inp(P+'.to'))}${F('Vessel / Voy.',inp(P+'.vessel'))}${pl?`<div><label>來自 Packing List</label><div style="padding:6px 0">${link(pl)}</div></div>`:''}${F('SAY TOTAL（英文大寫金額）',inp(P+'.sayTotal'),'wide')}</div>
+ ${co?`<div style="margin-top:10px">${chk(P+'.lessDeposit',`扣除已收訂金（${curOf(D)} ${f2(deposits(co))}，喺客人訂單嘅收款記錄）`)}</div>`:''}</div>
+ <div class="card"><h3>貨品</h3><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>顏色</th><th>雙數</th><th>單價</th><th>金額</th><th></th></tr>
+ ${D.lines.map((l,i)=>`<tr><td>${thumb(imgOf(l.devNo),34)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(findStyle(l.devNo).name||'')}</td><td>${inp(`${P}.lines.${i}.color`,{w:90})}</td><td>${inp(`${P}.lines.${i}.qty`,{n:1,w:80})}</td><td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${calc('ia'+i,()=>{const x=D.lines[i];return x?f2(num(x.qty)*num(x.price)):''})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`).join('')}
+ <tr class="tot"><td colspan="4" style="text-align:right">TOTAL</td><td class="c">${calc('iq',()=>f0(invTotals(D).qty))}</td><td class="c">${curOf(D)}</td><td class="c">${calc('it',()=>f2(invTotals(D).amt))}</td><td></td></tr></table>
+ <div class="bar" style="margin:8px 0 0"><button class="sm" onclick="D.lines.push({devNo:'',color:'',qty:'',price:''});save();render()">＋ 加一行</button></div>
+ ${pl?calc('ichk',()=>{const p=plTotals(pl),q=invTotals(D).qty;return p.prs!==q?`<div class="warn">⚠ Invoice 雙數 (${f0(q)}) 同 Packing List 雙數 (${f0(p.prs)}) 唔一致</div>`:`<div style="color:var(--ok)">✓ 雙數同 Packing List 一致（${p.ctn} 箱 / ${f0(p.prs)} 雙）</div>`}):''}</div>`}
+function piEditor(P){return topBar('')+`<div class="card"><div class="form">${F('單據標題',sel(P+'.title',['PROFORMA INVOICE','SALES CONFIRMATION']))}${F('單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('客人 PO 號',inp(P+'.custPO'))}${F('交貨期 ETD',inp(P+'.etd'))}${F('包裝',inp(P+'.packing'),'wide')}${F('備註',inp(P+'.remarks'),'wide')}${F('SAY TOTAL',inp(P+'.sayTotal'),'wide')}</div></div>
+ <div class="card"><h3>明細</h3>${matrixEditor(P+'.lines',D.lines,{group:true,price:'line'})}<div class="bar" style="margin:8px 0 0">${addStyleSel(P+'.lines')}</div><div class="totline">總雙數 <b>${calc('ct',()=>f0(coTotals(D).qty))}</b>　總金額 <b>${curOf(D)} ${calc('ca',()=>f2(coTotals(D).amt))}</b></div></div>`}
+
+/* =================== 追蹤頁 =================== */
+function sampleTrack(){const act=sampleTrack.all?docsOf('SD'):docsOf('SD',d=>['進行中','待修改','已寄客'].includes(d.status));
+ const list=act.sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+ return `<h2>樣板追蹤</h2><div class="bar"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" style="width:auto" ${sampleTrack.all?'checked':''} onchange="sampleTrack.all=this.checked;render()"> 顯示全部（包括已確認 / 已取消）</label></div>
+ ${list.length?`<div class="scroll"><table class="list"><tr><th>圖</th><th>樣板單</th><th>款號</th><th>客戶</th><th>工廠</th><th>類型</th><th>要求交樣</th><th>進度</th><th>狀態</th></tr>
+ ${list.map(d=>{const i=stageInfo(d.stages);const late=(d.due&&d.due<today()&&!['已確認','已取消','已寄客'].includes(d.status))||i.late;return `<tr class="${late?'late':''}"><td>${thumb(imgOf(d.devNo),40)}</td><td>${link(d)}</td><td>${esc(d.devNo)}</td><td>${esc(findCust(d.cust).name||'')}</td><td>${esc(findFac(d.fac).name||'')}</td><td>${esc(d.stype)}</td><td>${esc(d.due)}${late?' <span class="warn">延誤</span>':''}</td><td style="min-width:200px">${stageBar(d.stages)}</td><td>${badge(d.status)}</td></tr>`}).join('')}</table></div>`:'<div class="card muted">冇進行中嘅樣板。</div>'}`}
+function prodTrack(){const list=docsOf('PO',p=>prodTrack.all||!stageInfo(p.stages).finished).sort((a,b)=>(a.delivery||'9').localeCompare(b.delivery||'9'));
+ return `<h2>生產追蹤</h2><div class="bar"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" style="width:auto" ${prodTrack.all?'checked':''} onchange="prodTrack.all=this.checked;render()"> 顯示全部（包括已出貨）</label></div>
+ ${list.length?`<div class="scroll"><table class="list"><tr><th>圖</th><th>採購單</th><th>款號</th><th>客人PO</th><th>工廠</th><th>雙數</th><th>交貨期</th><th>進度</th></tr>
+ ${list.map(p=>{const i=stageInfo(p.stages);const late=i.late||(p.delivery&&p.delivery<today()&&!i.finished);return `<tr class="${late?'late':''}"><td>${thumb(imgOf(p.devNo),40)}</td><td>${link(p)}</td><td>${esc(p.devNo)}</td><td>${esc(p.custPO)}</td><td>${esc(findFac(p.fac).name||'')}</td><td>${f0(poTotals(p).qty)}</td><td>${esc(p.delivery)}${late?' <span class="warn">延誤</span>':''}</td><td style="min-width:220px">${stageBar(p.stages)}</td></tr>`}).join('')}</table></div>`:'<div class="card muted">冇進行中嘅生產。</div>'}`}
+function payTrack(){const cos=docsOf('CO',c=>c.status!=='已取消').sort((a,b)=>(b.date||'').localeCompare(a.date||''));let A=0,I=0,R=0;
+ const rows=cos.map(c=>{const t=coTotals(c);const inv=docsOf('INV',x=>x.coId===c.id).reduce((a,x)=>a+invTotals(x).amt,0);const r=paid(c);A+=t.amt;I+=inv;R+=r;const out=(inv||t.amt)-r;
+  return `<tr><td>${link(c,c.custPO||c.no)}</td><td>${esc(findCust(c.cust).name||'')}</td><td>${curOf(c)} ${f2(t.amt)}</td><td>${inv?f2(inv):'<span class="muted">未出 Invoice</span>'}</td><td>${f2(r)}</td><td class="${out>0.005?'warn':''}">${f2(out)}</td><td>${(c.payments||[]).map(p=>`${esc(p.type)} ${esc(p.date)} ${f2(p.amount)}`).join('<br>')}</td></tr>`}).join('');
+ return `<h2>收款</h2><p class="muted">收款記錄係可選嘅，喺「客人訂單」入面記錄。未收 = Invoice 金額（未出 Invoice 就用訂單金額）減已收。</p><div class="kpis"><div class="kpi">訂單總額<b>${f2(A)}</b></div><div class="kpi">已出 Invoice<b>${f2(I)}</b></div><div class="kpi">已收<b>${f2(R)}</b></div></div>
+ ${cos.length?`<div class="scroll"><table class="list"><tr><th>客人PO</th><th>客戶</th><th>訂單金額</th><th>Invoice 金額</th><th>已收</th><th>未收</th><th>收款明細</th></tr>${rows}</table></div>`:'<div class="card muted">未有訂單。</div>'}`}
+function homeView(){const days=S.lastBackup?Math.floor((Date.now()-new Date(S.lastBackup))/864e5):null;
+ const sds=docsOf('SD',d=>['進行中','待修改','已寄客'].includes(d.status));const pos=docsOf('PO',p=>!stageInfo(p.stages).finished);
+ const lateS=sds.filter(d=>(d.due&&d.due<today()&&d.status!=='已寄客')||stageInfo(d.stages).late);const lateP=pos.filter(p=>stageInfo(p.stages).late||(p.delivery&&p.delivery<today()));
+ const qts=docsOf('QT',q=>q.status==='等客人回覆');let out=0;docsOf('CO',c=>c.status!=='已取消').forEach(c=>{const inv=docsOf('INV',x=>x.coId===c.id).reduce((a,x)=>a+invTotals(x).amt,0);if(inv)out+=inv-paid(c)});
+ const steps=[['STY','① 開發款式','有圖 → 開發號碼、碼段、顏色'],['SD','② 樣板單','發工廠做樣板 + 樣板追蹤'],['QT','③ 報價單','樣板完成 → 報價俾客人'],['CO','④ 客人訂單','客人確認 → 落 PO 俾你'],['PO','⑤ 採購單','每款一張俾工廠 + 生產追蹤'],['PL','⑥ Packing List','生產完成 → 裝箱明細'],['INV','⑦ Invoice','向客人收款']];
+ return `<h2>首頁</h2>${days===null||days>7?`<div class="card warnbox">⚠ ${days===null?'你未下載過備份':`你已經 ${days} 日冇備份`}。資料只存喺呢個瀏覽器，請去 <a href="#backup">備份 / 還原</a> 下載備份檔。</div>`:''}
+ <div class="flow">${steps.map(([k,a,b])=>`<a href="#${k}" class="fstep"><b>${a}</b><span>${b}</span></a>`).join('<span class="arr">→</span>')}</div>
+ <div class="kpis"><a class="kpi" href="#tsample">進行中樣板<b>${sds.length}</b></a><a class="kpi" href="#QT">等回覆報價<b>${qts.length}</b></a><a class="kpi" href="#tprod">生產中採購單<b>${pos.length}</b></a><a class="kpi" href="#tpay">已出 Invoice 未收<b>${f2(out)}</b></a></div>
+ <div class="card"><h3>⚠ 延誤 / 要跟進</h3>${lateS.length||lateP.length?`<table class="list">${lateS.map(d=>`<tr class="late"><td>樣板</td><td>${link(d)}</td><td>${esc(d.devNo)}</td><td>${esc(findFac(d.fac).name||'')}</td><td>${stageBar(d.stages)}</td><td>要求交樣 ${esc(d.due)}</td></tr>`).join('')}${lateP.map(p=>`<tr class="late"><td>生產</td><td>${link(p)}</td><td>${esc(p.devNo)}</td><td>${esc(findFac(p.fac).name||'')}</td><td>${stageBar(p.stages)}</td><td>交貨期 ${esc(p.delivery)}</td></tr>`).join('')}</table>`:'<span class="muted">冇延誤 👍</span>'}</div>`}
+
+/* =================== 資料 =================== */
+function companyView(){const L=[['en','公司英文名稱'],['cn','公司中文名稱'],['addr','地址 Address'],['tel','電話 Tel'],['email','電郵 Email'],['contact','聯絡人 Contact'],['currency','預設貨幣'],['pol','預設出貨港 Port of Loading'],['origin','原產地 Country of Origin'],['bank','銀行名稱'],['bankAddr','銀行地址'],['accName','戶口名稱'],['accNo','戶口號碼'],['swift','SWIFT Code']];
+ return `<h2>公司資料</h2><p class="muted">所有單據抬頭同銀行資料都會用呢度。</p><div class="card"><div class="form">${L.map(([k,l])=>F(l,inp('company.'+k),k==='addr'?'wide':'')).join('')}</div></div>`}
+const MASTER={customers:{title:'客戶',cols:[['code','客戶編號',80],['name','公司名稱',200],['addr','地址',260],['attn','聯絡人',130],['tel','電話',120],['email','電郵',170],['country','國家',90],['payment','付款條款',200],['incoterm','貿易條款',70],['currency','貨幣',60],['dest','目的港',100],['note','備註',120]]},
+ factories:{title:'工廠',cols:[['code','工廠編號',80],['name','工廠名稱',200],['addr','地址',260],['attn','聯絡人',100],['tel','電話 / 微信',130],['email','電郵',170],['payment','付款條款',180],['note','備註',140]]}};
+function masterView(k){const M=MASTER[k];return `<h2>${M.title}</h2><div class="bar"><button class="pri" onclick="S.${k}.push({id:uid()});save();render()">＋ 新增${M.title}</button><span class="muted">直接喺格度改，自動儲存。</span></div>
+ <div class="scroll"><table class="grid"><tr>${M.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${S[k].map((r,i)=>`<tr>${M.cols.map(([f,,w])=>`<td>${inp(`${k}.${i}.${f}`,{w})}</td>`).join('')}<td><button class="sm del" onclick="ask('確定刪除？',()=>{S.${k}.splice(${i},1);save();render()})">✕</button></td></tr>`).join('')}</table></div>`}
+function settingsView(){return `<h2>追蹤階段設定</h2><p class="muted">每行一個階段。改完之後只會影響<b>新開</b>嘅樣板單 / 採購單；舊單可以喺單入面自己加減階段。</p>
+ <div class="two-col"><div class="card"><h3>樣板追蹤階段</h3><textarea style="min-height:240px" oninput="S.settings.sampleStages=this.value.split('\\n').map(x=>x.trim()).filter(Boolean);save()">${esc(S.settings.sampleStages.join('\n'))}</textarea></div>
+ <div class="card"><h3>生產追蹤階段</h3><textarea style="min-height:240px" oninput="S.settings.prodStages=this.value.split('\\n').map(x=>x.trim()).filter(Boolean);save()">${esc(S.settings.prodStages.join('\n'))}</textarea></div></div>`}
+function backupView(){return `<h2>備份 / 還原</h2><div class="card"><b>⚠ 資料只係存喺呢部電腦呢個瀏覽器入面（已加密）。</b><p>清除瀏覽器資料、換電腦或者換瀏覽器都會睇唔到。請<b>每星期最少下載一次備份</b>，放喺 Google Drive / Dropbox / USB。</p>
+ <p>備份檔係<b>加密</b>嘅，冇你嘅密碼（或者恢復碼）開唔到，所以放上雲端都安全。</p>
+ <p class="muted">最後儲存：${S.savedAt?new Date(S.savedAt).toLocaleString():'—'} · 款式 ${S.styles.length} · 單據 ${S.docs.length}</p>
+ <div class="bar"><button class="pri" onclick="exportJSON()">⬇ 下載加密備份檔</button><label class="btn">⬆ 由備份檔還原<input type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this)"></label></div>
+ <p class="muted">喺另一部電腦用：開返呢個網頁 → 登入畫面揀「由備份檔還原」→ 揀備份檔 → 用你嘅密碼同手機驗證碼登入。</p></div>
+ <div class="card"><b>匯出 Excel (CSV)</b><p class="muted">⚠ CSV 檔冇加密，請小心保管。</p><div class="bar" style="margin-top:8px"><button onclick="exportCSV()">⬇ 訂單明細 CSV</button></div></div>
+ <div class="card"><b>重設</b><p class="muted">清走所有業務資料，返回範例資料（密碼同手機驗證碼保持不變）。建議先下載備份。</p><button class="del" onclick="ask('確定清走所有資料？',()=>{S={...seed(),auth:S.auth,settings:S.settings};save();go('home')})">清走所有資料</button></div>`}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+async function exportJSON(){S.lastBackup=today();await flush();download(`辦公室系統備份-加密-${today()}.json`,JSON.stringify(VAULT),'application/json');render()}
+function importJSON(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
+ if(x.pw&&x.rc&&x.data)ask('還原會取代而家所有資料。還原之後要用<b>建立備份嗰陣嘅密碼同手機驗證碼</b>登入。確定？',async()=>{await flush();DK=null;S=null;VAULT=x;await idbPut('vault',x);loginView('已還原備份。請用備份嘅密碼同驗證碼登入。')});
+ else if(x.company&&Array.isArray(x.docs)&&Array.isArray(x.styles))ask(`匯入舊版（未加密）備份，會取代而家所有資料（備份有 ${x.styles.length} 個款式、${x.docs.length} 張單）。確定？`,()=>{S={...x,auth:S.auth,settings:{...S.settings,...(x.settings||{}),lockMin:S.settings.lockMin}};save();toast('已匯入');go('home')});
+ else toast('檔案格式唔啱')};r.readAsText(f)}
+function exportCSV(){const rows=[['客人PO','內部訂單號','日期','客戶','款號','客人款號','顏色','碼數','雙數','客人價','工廠價','ETD','狀態']];
+ docsOf('CO').forEach(c=>c.lines.forEach(l=>Object.entries(l.qty||{}).forEach(([z,q])=>{if(num(q))rows.push([c.custPO,c.no,c.date,findCust(c.cust).name||c.cust,l.devNo,findStyle(l.devNo).custStyle||'',l.color,z,q,l.price,findStyle(l.devNo).factoryPrice??'',c.etd,c.status])})));
+ download(`訂單明細-${today()}.csv`,'\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),'text/csv')}
+function helpView(){return `<h2>使用說明</h2>
+ <div class="card"><h3>開始之前</h3><ol><li><a href="#company">公司資料</a>：改做你公司名、地址、銀行資料。</li><li><a href="#customers">客戶</a>、<a href="#factories">工廠</a>：入你嘅資料（範例資料可以刪除）。</li></ol></div>
+ <div class="card"><h3>主流程</h3><ol>
+ <li><b>① 開發款式</b>：有圖就開一個開發號碼（即正式款號），上載圖片，填生產碼段（例如 26-35）同顏色（例如 Navy, Pink）。</li>
+ <li><b>② 樣板單</b>：喺款式頁㩒「開樣板單」，揀工廠，填物料規格，列印俾工廠。下面「樣板追蹤」填各階段嘅計劃同完成日期。工廠回覆大貨價之後，㩒「工廠價記入款式」。</li>
+ <li><b>③ 報價單</b>：樣板完成後㩒「開報價單俾客人」。系統會顯示工廠價同毛利率俾你參考（唔會印出嚟）。</li>
+ <li><b>④ 客人訂單</b>：客人確認後，喺報價單㩒「客人確認 → 輸入客人 PO」，填客人 PO 號、交貨期，同埋每個顏色每個碼嘅數量。</li>
+ <li><b>⑤ 採購單</b>：喺客人訂單㩒「生成採購單（每款一張）」。款號、顏色、碼數、數量全部跟客人 PO，價錢用工廠價。每張採購單都有「生產追蹤」。</li>
+ <li><b>⑥ Packing List</b>：生產完成後，喺客人訂單（或者採購單）㩒「開 Packing List」。系統會按每箱雙數預先計好箱號，你填每箱每碼雙數就得。下面有同訂單核對。</li>
+ <li><b>⑦ Invoice</b>：喺 Packing List 㩒「開 Invoice」，雙數同價錢自動帶入。如果收咗訂金，可以揀「扣除已收訂金」。</li></ol></div>
+ <div class="card"><h3>追蹤</h3><ul><li><a href="#tsample">樣板追蹤</a>、<a href="#tprod">生產追蹤</a>：延誤會標紅，亦會顯示喺首頁。</li><li><a href="#tpay">收款</a>：喺客人訂單記錄訂金 / 尾數（可選）。</li><li>追蹤階段可以喺 <a href="#settings">追蹤階段設定</a> 改。</li></ul></div>
+ <div class="card"><h3>列印 / 出 PDF</h3><p>單據入面㩒「🖨 預覽 / 列印」→「列印 / 存 PDF」→ 目的地揀「另存為 PDF」。喺「更多設定」入面取消「頁首及頁尾」，再勾選「背景圖形」。</p></div>`}
+
+/* =================== 列印 =================== */
+function lh(){const c=S.company;return `<div class="lh"><div class="n">${esc(c.en)}</div><div class="a">${esc(c.addr)}</div><div class="a">Tel: ${esc(c.tel)} &nbsp;&nbsp; Email: ${esc(c.email)}</div></div>`}
+const kv=(rows,l)=>`<table class="kv ${l?'l':''}">${rows.map(([a,b])=>`<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join('')}</table>`;
+const custBlock=d=>{const c=findCust(d.cust);return `<div><b>To:</b><br><b>${esc(c.name||'')}</b><br>${esc(c.addr||'')}${c.attn?'<br>Attn: '+esc(c.attn):''}${c.tel?'<br>Tel: '+esc(c.tel):''}</div>`};
+const bankBlock=()=>{const c=S.company;return `<div class="sec">BANK DETAILS</div>${kv([['Beneficiary:',c.accName],['Bank Name:',c.bank],['Bank Address:',c.bankAddr],['Account No.:',c.accNo],['SWIFT Code:',c.swift]],1)}`};
+const sign=(l,r)=>`<div class="sign"><div>${l[0]}${l[0]||l[1]?`<div class="ln">${l[1]}</div>`:''}</div><div>${r[0]}<div class="ln">${r[1]}</div></div></div>`;
+const ours=()=>`<b>For and on behalf of</b><br><span style="font-size:9px">${esc(S.company.en)}</span>`;
+function matrixPrint(lines,o){// o:{devNo, price:(l)=>price|null, cur}
+ const groups=[...new Set(lines.map(l=>l.devNo||o.devNo))];let h='',GQ=0,GA=0;
+ groups.forEach(dn=>{const s=findStyle(dn);const ls=lines.filter(l=>(l.devNo||o.devNo)===dn);const sizes=sizesOf(dn);ls.forEach(l=>Object.keys(l.qty||{}).forEach(z=>{if(num(l.qty[z])&&!sizes.includes(z))sizes.push(z)}));
+  let gq=0,ga=0;const st=sizes.map(z=>ls.reduce((a,l)=>a+num(l.qty?.[z]),0));
+  h+=`<table class="t"><tr><th colspan="${sizes.length+2+(o.price?2:0)}" style="text-align:left;background:#d9e1f2;color:#000">Style No.: ${esc(dn)}${s.custStyle?' &nbsp;/&nbsp; Cust. Style: '+esc(s.custStyle):''} &nbsp;—&nbsp; ${esc(s.name||'')}</th></tr>
+  <tr><th>Color</th>${sizes.map(z=>`<th>${esc(z)}</th>`).join('')}<th>Total Prs</th>${o.price?`<th>Unit Price</th><th>Amount</th>`:''}</tr>
+  ${ls.map(l=>{const q=qtyTot(l.qty);const p=o.price?num(o.price(l)):0;gq+=q;ga+=q*p;return `<tr><td class="c">${esc(l.color)}</td>${sizes.map(z=>`<td class="c">${num(l.qty?.[z])||''}</td>`).join('')}<td class="c"><b>${f0(q)}</b></td>${o.price?`<td class="r">${f2(p)}</td><td class="r">${f2(q*p)}</td>`:''}</tr>`}).join('')}
+  <tr class="tot"><td class="c">Sub-total</td>${st.map(v=>`<td class="c">${v||''}</td>`).join('')}<td class="c">${f0(gq)}</td>${o.price?`<td></td><td class="r">${f2(ga)}</td>`:''}</tr></table>`;GQ+=gq;GA+=ga});
+ return {h,GQ,GA}}
+function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=curOf(d);let h=lh();
+ if(d.type==='SD'){const s=findStyle(d.devNo);const imgs=[...(s.images||[]),...(d.images||[])];
+  h+=`<div class="title">樣板開發單 SAMPLE DEVELOPMENT SHEET</div><table class="t">${[['樣板單號 No.',d.no,'日期 Date',d.date],['開發款號 Style',d.devNo+(s.custStyle?' / 客款 '+s.custStyle:''),'工廠 Factory',fa.name||''],['品名',s.name||'','客戶 Customer',cu.name||''],['樣板類型 Type',d.stype,'數量 Qty',d.qty],['生產碼段',s.sizeRange||'','樣板碼數 Size',d.sampleSize],['顏色 Colors',d.colors,'要求交樣 Due',d.due]].map(r=>`<tr><td class="lb">${r[0]}</td><td style="width:30%">${esc(r[1])}</td><td class="lb">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
+  <div class="sec">圖片 PICTURE</div><div class="pic">${imgs.map(x=>`<img src="${x}">`).join('')||'<span style="color:#999">（冇圖片）</span>'}</div>
+  <table class="t" style="margin-top:8px"><tr><th>部位 Part</th><th>物料 Material</th><th>顏色 Color</th><th>備註 Remarks</th></tr>${d.parts.map(p=>`<tr><td><b>${esc(p.part)}</b></td><td>${esc(p.mat)}</td><td>${esc(p.color)}</td><td>${esc(p.rem)}</td></tr>`).join('')}</table>
+  <div class="sec">特別要求 Special Requirements</div><div class="box">${esc(d.special)}</div>
+  <div class="sec">工廠回覆 Factory Reply</div><table class="t">${[['樣板費 Sample Cost',d.reply.cost,'大貨價 Bulk Price',d.reply.bulk],['開模費 Mould Cost',d.reply.mould,'生產期 Lead Time',d.reply.lead],['MOQ',d.reply.moq,'實際交樣 Delivered',d.reply.delivered]].map(r=>`<tr><td class="lb">${r[0]}</td><td style="width:30%">${esc(r[1])}</td><td class="lb">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
+  ${sign(['','開單人 Prepared by'],['','工廠確認 Factory Confirm'])}`}
+ if(d.type==='QT'){h+=`<div class="title">QUOTATION</div><div class="two">${custBlock(d)}<div>${kv([['Quotation No.:',d.no],['Date:',d.date],['Valid Until:',d.valid],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>
+  <table class="t"><tr><th>No.</th><th>Picture</th><th>Style No.</th><th>Description</th><th>Material</th><th>Size Range</th><th>Colors</th><th>MOQ (Prs)</th><th>Unit Price (${cur})</th><th>Remarks</th></tr>
+  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c" style="width:30mm;height:24mm">${imgOf(l.devNo)?`<img src="${imgOf(l.devNo)}">`:''}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td>${esc([s.upper,s.lining,s.sole].filter(Boolean).join(' / '))}</td><td class="c">${esc(s.sizeRange)}</td><td class="c">${esc(l.colors)}</td><td class="c">${l.moq===''?'':f0(l.moq)}</td><td class="r"><b>${f2(l.price)}</b></td><td>${esc(l.rem)}</td></tr>`}).join('')}</table>
+  <div class="sec">TERMS & CONDITIONS</div>${kv([['Payment:',cu.payment||''],['Lead Time:',d.leadTime],['Port of Loading:',c.pol],['Packing:',d.packing],['Sample:',d.sample],['Remarks:',d.remarks]],1)}
+  <p style="font-size:10px">We look forward to your valued order.</p>${sign(['',''],[ours(),esc(c.contact)])}`}
+ if(d.type==='PO'){const s=findStyle(d.devNo);const m=matrixPrint(d.lines,{devNo:d.devNo,price:()=>d.cost});
+  h+=`<div class="title">PURCHASE ORDER 採購單</div><div class="two"><div><b>To:</b><br><b>${esc(fa.name||'')}</b><br>${esc(fa.addr||'')}<br>聯絡人: ${esc(fa.attn||'')} &nbsp; 電話: ${esc(fa.tel||'')}</div><div>${kv([['PO No.:',d.no],['Date:',d.date],['客人 PO No.:',d.custPO],['交貨期 Delivery:',d.delivery],['付款 Payment:',fa.payment||'']])}</div></div>
+  <div class="two" style="align-items:flex-start"><div style="flex:0 0 45mm">${imgOf(d.devNo)?`<img src="${imgOf(d.devNo)}" style="max-width:45mm;max-height:40mm;border:1px solid #999">`:''}</div><div>${kv([['款號 Style No.:',d.devNo],['客人款號:',s.custStyle||''],['品名:',s.name||''],['鞋面 Upper:',s.upper||''],['內裡 Lining:',s.lining||''],['鞋底 Sole:',s.sole||''],['碼段 Size:',s.sizeRange||'']],1)}</div></div>
+  ${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:22mm">${f0(m.GQ)} Prs</td><td class="r" style="width:30mm">${f2(m.GA)}</td></tr></table>
+  <div class="sec">生產要求 Requirements</div>${kv([['物料 Material:',d.req.mat],['包裝 Packing:',d.req.pack],['嘜頭 Shipping Mark:',d.req.mark],['質量 Quality:',d.req.qc],['驗貨 Inspection:',d.req.insp],['備註 Remarks:',d.req.rem]],1)}
+  ${sign([`<b>Issued by:</b><br><span style="font-size:9px">${esc(c.en)}</span>`,'簽名 Signature'],['<b>工廠確認 Confirmed by Factory:</b>','簽名及蓋章 Signature & Chop（請簽回）'])}`}
+ if(d.type==='PI'){const m=matrixPrint(d.lines,{price:l=>l.price});
+  h+=`<div class="title">${esc(d.title)}</div><div class="two">${custBlock(d)}<div>${kv([['No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>${m.h}
+  <table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td><td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td></tr></table>${d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
+  <div class="sec">TERMS & CONDITIONS</div>${kv([['Payment:',cu.payment||''],['Delivery (ETD):',d.etd],['Port of Loading:',c.pol],['Destination:',cu.dest||''],['Packing:',d.packing],['Remarks:',d.remarks]],1)}${bankBlock()}${sign(['<b>Confirmed & Accepted by Buyer:</b>','Authorized Signature & Company Chop'],[ours(),'Authorized Signature'])}`}
+ if(d.type==='PL'){const t=plTotals(d);const groups=[...new Set(d.lines.map(l=>l.devNo))];
+  h+=`<div class="title">PACKING LIST</div><div class="two">${custBlock(d)}<div>${kv([['Invoice No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['From:',d.from],['To:',d.to],['Vessel / Voy.:',d.vessel]])}</div></div>`;
+  groups.forEach(dn=>{const s=findStyle(dn);const ls=d.lines.filter(l=>l.devNo===dn);const sizes=sizesOf(dn);const g=plTotals({lines:ls});
+   h+=`<table class="t"><tr><th colspan="${sizes.length+10}" style="text-align:left;background:#d9e1f2;color:#000">Style No.: ${esc(dn)}${s.custStyle?' / Cust. Style: '+esc(s.custStyle):''} — ${esc(s.name||'')}</th></tr>
+   <tr><th rowspan="2">Ctn No.</th><th rowspan="2">Ctns</th><th rowspan="2">Color</th><th colspan="${sizes.length}">Size / Prs per Ctn</th><th rowspan="2">Prs/ Ctn</th><th rowspan="2">Total Prs</th><th rowspan="2">N.W./ Ctn</th><th rowspan="2">G.W./ Ctn</th><th rowspan="2">Total N.W.</th><th rowspan="2">Total G.W.</th><th rowspan="2">Total CBM</th></tr><tr>${sizes.map(z=>`<th>${esc(z)}</th>`).join('')}</tr>
+   ${ls.map(l=>{const n=ctns(l);return `<tr><td class="c">${esc(l.from)}-${esc(l.to)}</td><td class="c">${n}</td><td class="c">${esc(l.color)}</td>${sizes.map(z=>`<td class="c">${num(l.qty?.[z])||''}</td>`).join('')}<td class="c">${qtyTot(l.qty)}</td><td class="c">${f0(qtyTot(l.qty)*n)}</td><td class="c">${f1(l.nw)}</td><td class="c">${f1(l.gw)}</td><td class="c">${f1(num(l.nw)*n)}</td><td class="c">${f1(num(l.gw)*n)}</td><td class="c">${f3(num(l.cbm)*n)}</td></tr>`}).join('')}
+   <tr class="tot"><td class="c">Sub-total</td><td class="c">${g.ctn}</td><td colspan="${sizes.length+2}"></td><td class="c">${f0(g.prs)}</td><td></td><td></td><td class="c">${f1(g.nw)}</td><td class="c">${f1(g.gw)}</td><td class="c">${f3(g.cbm)}</td></tr></table>`});
+  h+=`<table class="t"><tr class="tot"><td>GRAND TOTAL</td><td class="c">${f0(t.ctn)} Cartons</td><td class="c">${f0(t.prs)} Pairs</td><td class="c">N.W. ${f1(t.nw)} kg</td><td class="c">G.W. ${f1(t.gw)} kg</td><td class="c">${f3(t.cbm)} CBM</td></tr></table>
+  <p><b>SAY TOTAL:</b> ${f0(t.ctn)} CARTONS (${f0(t.prs)} PAIRS) ONLY.</p><div class="two"><div><div class="sec">SHIPPING MARKS</div><div class="box">${esc(d.marks)}</div></div><div>${sign(['',''],[ours(),'Authorized Signature'])}</div></div>`}
+ if(d.type==='INV'){const t=invTotals(d);const pl=docById(d.plId);const p=pl?plTotals(pl):null;const co=docById(d.coId);const dep=d.lessDeposit&&co?deposits(co):0;
+  h+=`<div class="title">COMMERCIAL INVOICE</div><div class="two">${custBlock(d)}<div>${kv([['Invoice No.:',d.no],['Date:',d.date],['Your PO No.:',d.custPO],['Currency:',cur],['Price Term:',priceTerm(d)],['Payment:',cu.payment||'']])}</div></div>
+  <div style="margin-bottom:8px">${kv([['Shipped From:',d.from],['Shipped To:',d.to],['Vessel / Voy.:',d.vessel],['Country of Origin:',c.origin]],1)}</div>
+  <table class="t"><tr><th>No.</th><th>Style No.</th><th>Description</th><th>HS Code</th><th>Color</th><th>Qty (Prs)</th><th>Unit Price</th><th>Amount</th></tr>
+  ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td class="c">${esc(s.hs)}</td><td class="c">${esc(l.color)}</td><td class="r">${f0(l.qty)}</td><td class="r">${f2(l.price)}</td><td class="r">${f2(num(l.qty)*num(l.price))}</td></tr>`}).join('')}
+  <tr class="tot"><td colspan="5" style="text-align:right">TOTAL</td><td class="r">${f0(t.qty)}</td><td class="c">${cur}</td><td class="r">${f2(t.amt)}</td></tr>
+  ${dep?`<tr><td colspan="7" style="text-align:right">Less: Deposit Received</td><td class="r">(${f2(dep)})</td></tr><tr class="tot"><td colspan="7" style="text-align:right">BALANCE DUE</td><td class="r">${cur} ${f2(t.amt-dep)}</td></tr>`:''}</table>
+  ${d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
+  <div class="two"><div>${p?`<div class="sec">PACKING SUMMARY</div>${kv([['Total Cartons:',f0(p.ctn)],['Total Pairs:',f0(p.prs)],['Total N.W.:',f1(p.nw)+' kg'],['Total G.W.:',f1(p.gw)+' kg'],['Measurement:',f3(p.cbm)+' CBM']],1)}`:''}</div><div>${bankBlock()}</div></div>${sign(['',''],[ours(),'Authorized Signature'])}`}
+ if(d.type==='CO'){const m=matrixPrint(d.lines,{price:l=>l.price});h+=`<div class="title">ORDER DETAILS 訂單明細（內部）</div><div class="two">${custBlock(d)}<div>${kv([['客人 PO:',d.custPO],['Date:',d.date],['ETD:',d.etd],['Payment:',d.payment]])}</div></div>${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td><td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td></tr></table>`}
+ return h}
+function preview(id){const d=docById(id);const land=d.type==='PL'&&d.lines.some(l=>sizesOf(l.devNo).length>10);
+ document.getElementById('printArea').innerHTML=`<div class="doc ${land?'land':''}">${docHTML(d)}</div>`;
+ let st=document.getElementById('pgsz');if(!st){st=document.createElement('style');st.id='pgsz';document.head.appendChild(st)}
+ st.textContent=`@media print{@page{size:A4 ${land?'landscape':'portrait'};margin:0}}`;
+ document.title=d.no+(d.custPO?' '+d.custPO:'');document.body.classList.add('preview');window.scrollTo(0,0)}
+function closePreview(silent){document.body.classList.remove('preview');document.title='童鞋貿易辦公室系統'}
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('preview'))closePreview()});
+
+
+/* =================== 加密儲存 + 登入（密碼 + 手機驗證碼） =================== */
+const DBNAME='shoe-office-v2',STORE='kv';
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBNAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function idbGet(k){const db=await idb();return new Promise(res=>{const q=db.transaction(STORE).objectStore(STORE).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})}
+async function idbPut(k,v){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction(STORE,'readwrite');t.objectStore(STORE).put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function idbDel(k){const db=await idb();return new Promise(res=>{const t=db.transaction(STORE,'readwrite');t.objectStore(STORE).delete(k);t.oncomplete=res;t.onerror=res})}
+
+const te=new TextEncoder(),td=new TextDecoder();
+const rand=n=>crypto.getRandomValues(new Uint8Array(n));
+function b64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const ITER=600000;
+async function kek(secret,salt,iter){const base=await crypto.subtle.importKey('raw',te.encode(secret),'PBKDF2',false,['deriveKey']);
+ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['wrapKey','unwrapKey'])}
+async function wrapWith(secret,dk){const salt=rand(16),iv=rand(12);const k=await kek(secret,salt,ITER);const wk=await crypto.subtle.wrapKey('raw',dk,k,{name:'AES-GCM',iv});return{salt:b64(salt),iv:b64(iv),wk:b64(wk),iter:ITER}}
+async function unwrapWith(secret,w){const k=await kek(secret,unb64(w.salt),w.iter||ITER);return crypto.subtle.unwrapKey('raw',unb64(w.wk),k,{name:'AES-GCM',iv:unb64(w.iv)},{name:'AES-GCM'},true,['encrypt','decrypt'])}
+async function encData(dk,obj){const iv=rand(12);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},dk,te.encode(JSON.stringify(obj)));return{iv:b64(iv),ct:b64(ct)}}
+async function decData(dk,d){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(d.iv)},dk,unb64(d.ct));return JSON.parse(td.decode(pt))}
+
+/* ---- TOTP (RFC 6238, 30 秒, 6 位) ---- */
+const B32='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function b32enc(bytes){let bits=0,val=0,out='';for(const b of bytes){val=((val<<8)|b)&0xffff;bits+=8;while(bits>=5){out+=B32[(val>>>(bits-5))&31];bits-=5}}if(bits>0)out+=B32[(val<<(5-bits))&31];return out}
+function b32dec(s){s=String(s).toUpperCase().replace(/[^A-Z2-7]/g,'');let bits=0,val=0;const out=[];for(const c of s){val=((val<<5)|B32.indexOf(c))&0xffff;bits+=5;if(bits>=8){out.push((val>>>(bits-8))&255);bits-=8}}return new Uint8Array(out)}
+async function hotp(secret,counter){const key=await crypto.subtle.importKey('raw',b32dec(secret),{name:'HMAC',hash:'SHA-1'},false,['sign']);
+ const msg=new Uint8Array(8);let c=counter;for(let i=7;i>=0;i--){msg[i]=c&255;c=Math.floor(c/256)}
+ const h=new Uint8Array(await crypto.subtle.sign('HMAC',key,msg));const o=h[h.length-1]&15;
+ const code=(((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1000000;return String(code).padStart(6,'0')}
+async function verifyTotp(secret,code){code=String(code||'').replace(/\D/g,'');if(code.length!==6)return false;const t=Math.floor(Date.now()/30000);for(const w of[-1,0,1])if(await hotp(secret,t+w)===code)return true;return false}
+const ISSUER='童鞋貿易辦公室';
+const otpUri=(secret,label)=>`otpauth://totp/${encodeURIComponent(ISSUER+':'+label)}?secret=${secret}&issuer=${encodeURIComponent(ISSUER)}&algorithm=SHA1&digits=6&period=30`;
+function qrSvg(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:5,margin:4,scalable:true})}
+function newRecoveryCode(){const b=rand(20);let s='';for(const x of b)s+=B32[x&31];return s.match(/.{4}/g).join('-')}
+const normRC=s=>String(s||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
+
+/* ---- 狀態 ---- */
+let S=null,DK=null,VAULT=null,saveChain=Promise.resolve(),saveTimer=null;
+function save(){if(!DK)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,300)}
+function flush(){clearTimeout(saveTimer);if(!DK||!S)return saveChain;const dk=DK,snap=S;
+ saveChain=saveChain.then(async()=>{snap.savedAt=new Date().toISOString();VAULT.data=await encData(dk,snap);await idbPut('vault',VAULT)}).catch(e=>{console.error(e);toast('⚠ 儲存失敗，請即刻備份')});return saveChain}
+window.addEventListener('beforeunload',()=>{if(DK)flush()});
+
+/* ---- 登入畫面 ---- */
+const authEl=()=>document.getElementById('auth');
+function showAuth(html){document.getElementById('app').style.display='none';document.getElementById('printArea').innerHTML='';document.body.classList.remove('preview');
+ const a=authEl();a.style.display='flex';a.innerHTML=`<div class="abox"><div class="alogo">👟 童鞋貿易辦公室系統</div>${html}</div>`;const f=a.querySelector('input');if(f)f.focus()}
+function hideAuth(){authEl().style.display='none';authEl().innerHTML='';document.getElementById('app').style.display=''}
+const aerr=m=>{const e=document.getElementById('aerr');if(e){e.textContent=m;e.style.display=m?'block':'none'}};
+function busy(on,label){const b=document.getElementById('abtn');if(b){b.disabled=on;if(label)b.textContent=on?'處理中…':label}}
+
+/* 失敗次數限制（本機） */
+function throttle(){try{return JSON.parse(localStorage.getItem('so-fail'))||{n:0,until:0}}catch(e){return{n:0,until:0}}}
+function failOnce(){const t=throttle();t.n++;if(t.n>=5)t.until=Date.now()+60000*Math.pow(2,Math.min(t.n-5,6));localStorage.setItem('so-fail',JSON.stringify(t))}
+function failReset(){localStorage.removeItem('so-fail')}
+
+function loginView(msg){showAuth(`<h2>登入</h2>
+ <form onsubmit="event.preventDefault();doLogin()"><label>密碼</label><input type="password" id="apw" autocomplete="current-password">
+ <label>手機驗證碼（6 位數）</label><input id="acode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+ <div id="aerr" class="aerr" style="display:${msg?'block':'none'}">${esc(msg||'')}</div>
+ <button class="pri" id="abtn" type="submit">登入</button></form>
+ <div class="alinks"><a href="javascript:recoverView()">唔記得密碼 / 唔見咗手機？用恢復碼</a><label>由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`)}
+async function doLogin(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
+ const pw=document.getElementById('apw').value,code=document.getElementById('acode').value;if(!pw||!code)return aerr('請輸入密碼同驗證碼');
+ busy(true,'登入');aerr('');let dk,s;
+ try{dk=await unwrapWith(pw,VAULT.pw);s=await decData(dk,VAULT.data)}catch(e){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤')}
+ if(!(await verifyTotp(s.auth?.totp,code))){failOnce();busy(false,'登入');return aerr('密碼或驗證碼錯誤（驗證碼每 30 秒轉一次，請用最新嗰個）')}
+ failReset();enterApp(dk,s)}
+function enterApp(dk,s){DK=dk;S=s;S.settings=S.settings||{};S.settings.sampleStages=S.settings.sampleStages||[...DEF_SAMPLE_STAGES];S.settings.prodStages=S.settings.prodStages||[...DEF_PROD_STAGES];S.settings.lockMin=S.settings.lockMin||15;
+ lastAct=Date.now();hideAuth();route()}
+async function lockNow(msg){if(DK)await flush();S=null;DK=null;D=null;document.getElementById('main').innerHTML='';loginView(msg||'')}
+
+/* 閒置自動鎖 */
+let lastAct=Date.now();['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>window.addEventListener(ev,()=>{lastAct=Date.now()},{passive:true}));
+setInterval(()=>{if(DK&&S&&Date.now()-lastAct>(S.settings.lockMin||15)*60000)lockNow('閒置太耐，已自動鎖定。')},20000);
+
+/* ---- 首次設定 / 重設 ---- */
+let SETUP=null;// {mode:'new'|'recover', plain, dk, s, pw, totp, rc}
+function setupStart(plain){SETUP={mode:'new',plain};setupPw()}
+function setupPw(){showAuth(`<h2>${SETUP.mode==='recover'?'設定新密碼':'第一次使用：設定密碼'}</h2><div class="steps"><b>1. 密碼</b> → 2. 手機驗證碼 → 3. 恢復碼</div>
+ <p class="amuted">資料會用呢個密碼加密，存喺呢部電腦。最少 8 個字，建議用一句容易記嘅句子。</p>
+ <form onsubmit="event.preventDefault();setupPw2()"><label>密碼</label><input type="password" id="apw" autocomplete="new-password"><label>再輸入一次</label><input type="password" id="apw2" autocomplete="new-password">
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">下一步</button></form>
+ ${SETUP.mode==='new'?`<div class="alinks"><label>已經有加密備份檔？由備份檔還原<input type="file" accept=".json" style="display:none" onchange="restoreVaultFile(this)"></label></div>`:''}`)}
+function setupPw2(){const a=document.getElementById('apw').value,b=document.getElementById('apw2').value;if(a.length<8)return aerr('密碼最少要 8 個字');if(a!==b)return aerr('兩次輸入嘅密碼唔一樣');SETUP.pw=a;SETUP.totp=b32enc(rand(20));setupTotp()}
+function setupTotp(){const uri=otpUri(SETUP.totp,'admin');showAuth(`<h2>連接手機驗證碼</h2><div class="steps">1. 密碼 → <b>2. 手機驗證碼</b> → 3. 恢復碼</div>
+ <ol class="amuted" style="text-align:left;padding-left:18px"><li>喺手機安裝 <b>Google Authenticator</b> 或者 <b>Microsoft Authenticator</b>（免費）。</li><li>喺 App 入面揀「＋」→「掃描 QR 碼」，掃下面個 QR 碼。</li><li>將 App 顯示嘅 6 位數字輸入落下面。</li></ol>
+ <div class="qr">${qrSvg(uri)}</div><div class="amuted">掃唔到？喺 App 揀「手動輸入」，金鑰：<br><code class="key">${SETUP.totp.match(/.{4}/g).join(' ')}</code></div>
+ <form onsubmit="event.preventDefault();setupTotp2()"><label>App 顯示嘅 6 位數字</label><input id="acode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">確認</button></form>`)}
+async function setupTotp2(){if(!(await verifyTotp(SETUP.totp,document.getElementById('acode').value)))return aerr('驗證碼唔啱，請再試（確認手機時間正確）');SETUP.rc=newRecoveryCode();setupRC()}
+function setupRC(){showAuth(`<h2>保存恢復碼</h2><div class="steps">1. 密碼 → 2. 手機驗證碼 → <b>3. 恢復碼</b></div>
+ <p class="amuted">如果你<b>唔記得密碼</b>或者<b>唔見咗手機</b>，就要靠呢組恢復碼先開到啲資料。<b>冇咗佢，資料就一世開唔返</b>，連我都幫你唔到。</p>
+ <div class="rc">${SETUP.rc}</div><p class="amuted">請抄低，或者影相存喺安全嘅地方（唔好同電腦放埋一齊）。</p>
+ <div class="bar" style="justify-content:center"><button onclick="navigator.clipboard&&navigator.clipboard.writeText('${SETUP.rc}').then(()=>toast('已複製'))">複製</button><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${SETUP.rc}\\r\\n\\r\\n用途：唔記得密碼或者唔見咗手機時，喺登入畫面揀「用恢復碼」。','text/plain')">下載做文字檔</button></div>
+ <label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input type="checkbox" id="aok" style="width:auto"> 我已經保存好恢復碼</label>
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" onclick="setupFinish()">完成，開始使用</button>`)}
+async function setupFinish(){if(!document.getElementById('aok').checked)return aerr('請先保存恢復碼，再剔選上面個格');busy(true,'完成，開始使用');
+ try{let dk=SETUP.dk,s=SETUP.s;
+  if(SETUP.mode==='new'){dk=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);s=SETUP.plain||seed()}
+  s.auth={totp:SETUP.totp};
+  VAULT={v:1,created:VAULT?.created||new Date().toISOString(),pw:await wrapWith(SETUP.pw,dk),rc:await wrapWith(normRC(SETUP.rc),dk),data:await encData(dk,s)};
+  await idbPut('vault',VAULT);await idbDel('state');SETUP=null;failReset();enterApp(dk,s);toast('設定完成 🔒')}
+ catch(e){console.error(e);busy(false,'完成，開始使用');aerr('出錯：'+e.message)}}
+
+/* ---- 恢復碼登入 ---- */
+function recoverView(){showAuth(`<h2>用恢復碼登入</h2><p class="amuted">輸入你設定時保存嘅恢復碼。登入之後要重新設定密碼同手機驗證碼，並會換一組新嘅恢復碼。</p>
+ <form onsubmit="event.preventDefault();doRecover()"><label>恢復碼</label><input id="arc" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off">
+ <div id="aerr" class="aerr" style="display:none"></div><button class="pri" id="abtn" type="submit">確認</button></form><div class="alinks"><a href="javascript:loginView()">← 返回登入</a></div>`)}
+async function doRecover(){const t=throttle();if(t.until>Date.now())return aerr(`輸入錯誤太多次，請 ${Math.ceil((t.until-Date.now())/1000)} 秒後再試`);
+ busy(true,'確認');try{const dk=await unwrapWith(normRC(document.getElementById('arc').value),VAULT.rc);const s=await decData(dk,VAULT.data);failReset();SETUP={mode:'recover',dk,s};setupPw()}
+ catch(e){failOnce();busy(false,'確認');aerr('恢復碼唔啱')}}
+
+/* ---- 備份檔 ---- */
+function restoreVaultFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{let x;try{x=JSON.parse(r.result)}catch(e){return toast('檔案格式唔啱')}
+ if(x.pw&&x.rc&&x.data){if(VAULT&&!confirmReplace())return;VAULT=x;await idbPut('vault',x);loginView('已載入備份檔。請用建立備份嗰陣嘅密碼同手機驗證碼登入。')}
+ else if(x.company&&Array.isArray(x.docs)){if(VAULT)return toast('呢個係舊版未加密備份，請登入之後喺「備份 / 還原」匯入');setupStart(x);toast('已讀取舊版備份，請設定密碼')}
+ else toast('檔案格式唔啱')};r.readAsText(f)}
+function confirmReplace(){return window.confirm('還原會取代呢部電腦而家嘅資料，確定？')}
+
+/* ---- 安全設定（登入後） ---- */
+function securityView(){return `<h2>🔒 安全設定</h2>
+ <div class="card"><h3>而家嘅保護</h3><ul><li>資料用你嘅密碼加密（AES-256），存喺呢部電腦。</li><li>登入要密碼 + 手機驗證碼。</li><li>閒置 <b>${S.settings.lockMin}</b> 分鐘自動鎖定。</li><li>下載嘅備份檔都係加密嘅。</li></ul>
+ <p class="muted">留意：呢個係冇 server 嘅本機保護。密碼加密係主要防線；手機驗證碼係額外一道門，可以擋到一般人，但擋唔到識技術又攞到你部電腦嘅人。所以請用一個夠長、唔會喺其他地方用嘅密碼。</p></div>
+ <div class="card"><h3>自動鎖定</h3><div class="bar">閒置 ${sel('settings.lockMin',[[5,'5 分鐘'],[10,'10 分鐘'],[15,'15 分鐘'],[30,'30 分鐘'],[60,'60 分鐘']],{w:140})} 之後自動鎖定</div></div>
+ <div class="card"><h3>更改密碼</h3><div class="form">${F('現有密碼','<input type="password" id="s_old">')}${F('新密碼（最少 8 個字）','<input type="password" id="s_new">')}${F('再輸入新密碼','<input type="password" id="s_new2">')}</div><div class="bar" style="margin-top:10px"><button class="pri" onclick="changePw()">更改密碼</button></div></div>
+ <div class="card"><h3>換手機 / 重新連接驗證碼</h3><p class="muted">換咗新手機，或者想重新設定 Authenticator 時用。舊手機嘅驗證碼會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="t_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="resetTotp()">重新設定手機驗證碼</button></div><div id="tbox"></div></div>
+ <div class="card"><h3>換一組新恢復碼</h3><p class="muted">如果懷疑恢復碼外洩，可以換一組新嘅，舊嗰組會即刻失效。</p><div class="form">${F('現有密碼','<input type="password" id="r_pw">')}</div><div class="bar" style="margin-top:10px"><button onclick="newRC()">產生新恢復碼</button></div><div id="rbox"></div></div>`}
+async function checkPw(pw){try{await unwrapWith(pw,VAULT.pw);return true}catch(e){return false}}
+async function changePw(){const o=document.getElementById('s_old').value,a=document.getElementById('s_new').value,b=document.getElementById('s_new2').value;
+ if(a.length<8)return toast('新密碼最少要 8 個字');if(a!==b)return toast('兩次輸入嘅新密碼唔一樣');if(!(await checkPw(o)))return toast('現有密碼唔啱');
+ VAULT.pw=await wrapWith(a,DK);await flush();toast('密碼已更改');render()}
+async function resetTotp(){if(!(await checkPw(document.getElementById('t_pw').value)))return toast('密碼唔啱');const sec=b32enc(rand(20));
+ document.getElementById('tbox').innerHTML=`<div style="margin-top:12px"><p>用手機 Authenticator 掃呢個 QR 碼（或者手動輸入金鑰 <code class="key">${sec.match(/.{4}/g).join(' ')}</code>），然後輸入顯示嘅 6 位數字：</p><div class="qr" style="text-align:left">${qrSvg(otpUri(sec,'admin'))}</div><div class="bar"><input id="t_code" maxlength="6" inputmode="numeric" style="width:140px"><button class="pri" onclick="confirmTotp('${sec}')">確認</button></div></div>`}
+async function confirmTotp(sec){if(!(await verifyTotp(sec,document.getElementById('t_code').value)))return toast('驗證碼唔啱，請再試');S.auth={...(S.auth||{}),totp:sec};await flush();toast('手機驗證碼已更新');render()}
+async function newRC(){if(!(await checkPw(document.getElementById('r_pw').value)))return toast('密碼唔啱');const rc=newRecoveryCode();VAULT.rc=await wrapWith(normRC(rc),DK);await flush();
+ document.getElementById('rbox').innerHTML=`<p>新恢復碼（舊嗰組已經失效），請即刻抄低：</p><div class="rc">${rc}</div><button onclick="download('恢復碼-${today()}.txt','童鞋貿易辦公室系統 恢復碼\\r\\n${rc}','text/plain')">下載做文字檔</button>`}
+
+/* ---- 啟動 ---- */
+async function boot(){if(!window.crypto||!crypto.subtle){showAuth('<p class="aerr" style="display:block">呢個瀏覽器唔支援加密功能。請用最新版 Chrome / Edge / Safari，並經 https:// 網址或者直接開檔案使用。</p>');return}
+ try{VAULT=await idbGet('vault')}catch(e){VAULT=null}
+ if(VAULT)loginView();else{let plain=null;try{plain=await idbGet('state')}catch(e){}setupStart(plain&&plain.company&&plain.styles?plain:null)}}
+
+boot();
+</script>
+</body>
+</html>
