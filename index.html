@@ -221,6 +221,10 @@ label.btn.sm{padding:4px 10px;font-size:13px}
 
 .doc.pdfmode{min-height:0!important;margin:0!important;box-shadow:none}
 #pvbar button{white-space:nowrap}
+
+.bar select{max-width:100%}
+
+.chip.sel a{color:#fff}
 </style>
 </head>
 <body>
@@ -300,6 +304,7 @@ const T={
  PL:{name:'Packing List',prefix:'INV'},
  INV:{name:'Invoice',prefix:'INV'},
  PI:{name:'PI / SC',prefix:'PI'},
+ CR:{name:'快遞記錄',prefix:'EX'},
 };
 function nextNo(prefix){const y=new Date().getFullYear();const re=new RegExp('^'+prefix+'-'+y+'-(\\d+)$');let m=0;
  (prefix==='DEV'?S.styles.map(s=>s.devNo):S.docs.map(d=>d.no)).forEach(n=>{const r=re.exec(n||'');if(r)m=Math.max(m,+r[1])});
@@ -320,6 +325,7 @@ function newDoc(type,extra={}){
  if(type==='PO')Object.assign(d,{fac:'',coId:'',devNo:'',custPO:'',delivery:'',cost:'',req:{mat:'按確認樣',pack:'每對入彩盒，每箱 12 對',mark:'正嘜：客人LOGO / PO No. / Style / Color / C/No.　側嘜：Size / Qty / N.W. / G.W. / Made in China',qc:'需通過 EN71-3 / REACH 測試；大貨須與確認樣一致',insp:'出貨前 AQL 2.5 驗貨，合格後方可出貨',rem:'如未能按時交貨，請提前通知'},stages:stagesFrom(S.settings.prodStages)});
  if(type==='PL')Object.assign(d,{cust:c0,coId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',marks:''});
  if(type==='INV')Object.assign(d,{cust:c0,coId:'',plId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',sayTotal:'',lessDeposit:false});
+ if(type==='CR')Object.assign(d,{fromLoc:companyLocs()[0].id,sender:{...companyLocs()[0]},courier:'DHL',awb:'',status:'已寄出',delivered:'',contents:'樣板',pkgs:1,weight:'',dims:'',payBy:CR_PAYBY[0],acct:'',freight:'',toType:'cust',cust:c0,fac:'',recv:{},sdIds:[],title:'PROFORMA INVOICE',reason:CR_REASONS[0],incoterm:'DAP',currency:S.company.currency||'USD',remark:'',notes:[]});
  if(type==='PI')Object.assign(d,{title:'PROFORMA INVOICE',cust:c0,coId:'',custPO:'',etd:'',packing:'Each pair in color box, export carton',remarks:'Quantity tolerance ±3%.',sayTotal:''});
  Object.assign(d,extra);return d}
 
@@ -348,7 +354,10 @@ const custOpts=()=>[['','— 揀客戶 —'],...S.customers.map(c=>[c.code,c.cod
 const facOpts=()=>[['','— 揀工廠 —'],...S.factories.map(c=>[c.code,c.code+'  '+c.name])];
 const styleOpts=(first='— 揀款號 —')=>[['',first],...S.styles.map(s=>[s.devNo,s.devNo+'  '+(s.name||'')])];
 document.addEventListener('input',e=>{const t=e.target,p=t.dataset.p;if(!p||t.type==='file')return;let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.n)v=v===''?'':+v;setPath(S,p,v);save();if(!t.dataset.r)refreshCalc()});
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.p&&t.dataset.r){if(t.dataset.p.endsWith('.cust')&&D&&D.to!==undefined){D.to=findCust(D.cust).dest||D.to}if(t.dataset.p.endsWith('.cust')&&D&&D.type==='CO')D.payment=findCust(D.cust).payment||D.payment;save();setTimeout(render,0)}});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.p&&t.dataset.r){if(t.dataset.p.endsWith('.cust')&&D&&D.to!==undefined){D.to=findCust(D.cust).dest||D.to}if(t.dataset.p.endsWith('.cust')&&D&&D.type==='CO')D.payment=findCust(D.cust).payment||D.payment;
+ if(D&&D.type==='CR'&&/\.(cust|fac|toType)$/.test(t.dataset.p))crRecvFrom(D);
+ if(D&&D.type==='CR'&&/\.fromLoc$/.test(t.dataset.p)){const l=companyLocs().find(x=>x.id===D.fromLoc);if(l)D.sender={...l}}
+ if(D&&D.type==='CR'&&/\.(awb|courier)$/.test(t.dataset.p))(D.sdIds||[]).forEach(id=>{const s=docById(id);if(s){s.courier=(D.courier+' '+(D.awb||'')).trim();if(s.status==='進行中')s.status='已寄客'}});save();setTimeout(render,0)}});
 function resizeImg(file,max=1000){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};im.onerror=()=>res(null);im.src=r.result};r.readAsDataURL(file)})}
 async function addImgs(p,input){const arr=getPath(S,p);for(const f of input.files){const d=await resizeImg(f);if(d)arr.push(d)}save();render()}
 function imgBox(p,title){const arr=getPath(S,p)||[];return `<div class="imgbox">${arr.map((s,k)=>`<div class="im"><img src="${s}"><button class="sm del" onclick="getPath(S,'${p}').splice(${k},1);save();render()">移除</button></div>`).join('')}
@@ -362,7 +371,7 @@ const link=(d,label)=>d?`<a href="#${d.type}-${d.id}">${esc(label||d.no)}</a>`:'
 
 /* =================== 導航 =================== */
 const NAV=[['home','🏠 首頁'],['grp','主流程'],['STY','① 開發款式'],['SD','② 樣板單'],['QT','③ 報價單'],['CO','④ 客人訂單 (PO)'],['PO','⑤ 採購單'],['PL','⑥ Packing List'],['INV','⑦ Invoice'],
- ['grp','追蹤'],['tsample','樣板追蹤'],['tprod','生產追蹤'],['tpay','收款'],
+ ['grp','追蹤'],['tsample','樣板追蹤'],['tprod','生產追蹤'],['CR','📦 寄快遞紀錄'],['tpay','收款'],
  ['grp','可選'],['PI','PI / SC'],
  ['grp','資料'],['customers','客戶'],['factories','工廠'],['suppliers','材料供應商'],['company','公司資料'],['settings','追蹤階段設定'],
  ['grp','系統'],['cloud','☁ Nextcloud 同步'],['backup','備份 / 還原'],['users','👥 用戶管理'],['security','🔒 安全設定'],['help','使用說明']];
@@ -431,12 +440,13 @@ function docSummary(d){
  if(d.type==='PO'){const t=poTotals(d);return [esc(d.devNo),esc(findFac(d.fac).name||''),esc(d.custPO),f0(t.qty)+' 雙',esc(d.delivery),stageBar(d.stages)]}
  if(d.type==='PL'){const t=plTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),t.ctn+' 箱',f0(t.prs)+' 雙']}
  if(d.type==='INV'){const t=invTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒']}
- if(d.type==='PI'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒']}}
-const HEADS={SD:['款號','工廠','類型','進度','狀態'],QT:['客戶','款號','狀態'],CO:['客戶','客人PO號','雙數','金額','ETD','狀態'],PO:['款號','工廠','客人PO號','雙數','交貨期','生產進度'],PL:['客戶','客人PO號','箱數','雙數'],INV:['客戶','客人PO號','雙數','金額'],PI:['客戶','客人PO號','雙數','金額']};
-const INTRO={SD:'揀開發款式開樣板單俾工廠，圖片同資料會自動帶入。每張樣板單都有自己嘅進度追蹤。',QT:'樣板完成之後，開報價單俾客人。可以喺開發款式或者樣板單入面一㩒開。',CO:'客人確認報價之後會落 PO 俾你，喺呢度輸入每個顏色、每個碼嘅數量。之後一㩒就可以生成採購單（每款一張）。',PO:'採購單由客人訂單生成，每款一張，用工廠價。每張都有生產進度追蹤。',PL:'生產完成後，由客人訂單開 Packing List。',INV:'由 Packing List 一㩒開 Invoice，向客人收款。',PI:'（可選）有啲客人要 PI 先肯落訂金，可以由客人訂單開。'};
+ if(d.type==='PI'){const t=coTotals(d);return [esc(findCust(d.cust).name||''),esc(d.custPO),f0(t.qty)+' 雙',CANP()?curOf(d)+' '+f2(t.amt):'🔒']}
+ if(d.type==='CR')return [esc(d.courier),trackLink(d),esc(d.recv?.company||''),esc(d.contents)+((d.sdIds||[]).length?' · '+d.sdIds.map(id=>esc(docById(id)?.devNo||'')).join(', '):''),badge(d.status,d.status==='已簽收'?'ok':'')]}
+const HEADS={SD:['款號','工廠','類型','進度','狀態'],QT:['客戶','款號','狀態'],CO:['客戶','客人PO號','雙數','金額','ETD','狀態'],PO:['款號','工廠','客人PO號','雙數','交貨期','生產進度'],PL:['客戶','客人PO號','箱數','雙數'],INV:['客戶','客人PO號','雙數','金額'],PI:['客戶','客人PO號','雙數','金額'],CR:['快遞','運單號（㩒追蹤）','收件','內容','狀態']};
+const INTRO={CR:'每次寄快遞記低：快遞公司、運單號、寄俾邊個、寄咗咩。㩒運單號可以直接追蹤；「列印」會印出報關用嘅 Proforma / Commercial Invoice。喺樣板單㩒「📦 寄快遞」會自動帶入資料。',SD:'揀開發款式開樣板單俾工廠，圖片同資料會自動帶入。每張樣板單都有自己嘅進度追蹤。',QT:'樣板完成之後，開報價單俾客人。可以喺開發款式或者樣板單入面一㩒開。',CO:'客人確認報價之後會落 PO 俾你，喺呢度輸入每個顏色、每個碼嘅數量。之後一㩒就可以生成採購單（每款一張）。',PO:'採購單由客人訂單生成，每款一張，用工廠價。每張都有生產進度追蹤。',PL:'生產完成後，由客人訂單開 Packing List。',INV:'由 Packing List 一㩒開 Invoice，向客人收款。',PI:'（可選）有啲客人要 PI 先肯落訂金，可以由客人訂單開。'};
 function docList(type){const docs=docsOf(type).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
- const canNew={SD:1,QT:1,CO:1}[type];
- return `<h2>${NAV.find(n=>n[0]===type)[1]}</h2><p class="muted">${INTRO[type]}</p><div class="bar">${canNew?`<button class="pri" onclick="flowNew('${type}')">＋ 新增${T[type].name}</button>`:''}<span class="sp"></span><input placeholder="搜尋…" style="max-width:240px" oninput="filterRows(this.value)"></div>
+ const canNew={SD:1,QT:1,CO:1,CR:1}[type];
+ return `<h2>${NAV.find(n=>n[0]===type)[1]}</h2><p class="muted">${INTRO[type]}</p><div class="bar">${canNew?`<button class="pri" onclick="flowNew('${type}')">＋ 新增${T[type].name}</button>`:''}<span class="sp"></span><input placeholder="搜尋…" style="max-width:240px" oninput="filterRows(this.value)"></div>${type==='CR'?crLogExtra():''}
  ${docs.length?`<div class="scroll"><table class="list" id="lt"><tr><th>單號</th><th>日期</th>${HEADS[type].map(h=>`<th>${h}</th>`).join('')}<th></th></tr>
  ${docs.map(d=>`<tr><td><a href="#${type}-${d.id}"><b>${esc(d.no)}</b></a></td><td>${esc(d.date)}</td>${docSummary(d).map(x=>`<td>${x}</td>`).join('')}
  <td style="white-space:nowrap;text-align:right"><button class="sm" onclick="preview('${d.id}')">列印</button> <button class="sm" onclick="dupDoc('${d.id}')">複製</button> <button class="sm del" onclick="delDoc('${d.id}')">刪除</button></td></tr>`).join('')}</table></div>`:`<div class="card muted">未有${T[type].name}。</div>`}`}
@@ -493,13 +503,13 @@ function addStyleRows(P,dn){if(!dn)return;const arr=getPath(S,P);const s=findSty
 const addStyleSel=(P,label='＋ 加款式')=>`<select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="addStyleRows('${P}',this.value)">${styleOpts(label).map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select>`;
 
 /* =================== 編輯：各單據 =================== */
-function docEditor(){D=docById(editing);if(!D)return docList(view);const P=`docs.${S.docs.indexOf(D)}`;return ({SD:sdEditor,QT:qtEditor,CO:coEditor,PO:poEditor,PL:plEditor,INV:invEditor,PI:piEditor})[D.type](P)}
+function docEditor(){D=docById(editing);if(!D)return docList(view);const P=`docs.${S.docs.indexOf(D)}`;return ({SD:sdEditor,QT:qtEditor,CO:coEditor,PO:poEditor,PL:plEditor,INV:invEditor,PI:piEditor,CR:crEditor})[D.type](P)}
 function custFields(P){const c=findCust(D.cust);return F('客戶',sel(P+'.cust',custOpts(),{r:1}))+RO('聯絡人 / 付款條款',(c.attn||'')+(c.payment?' / '+c.payment:''))}
 function sdEditor(P){const s=findStyle(D.devNo);
- return topBar(`${CANP()?`<button onclick="replyToStyle('${D.id}')">工廠價記入款式</button>`:''}<button onclick="qtFromSD('${D.id}')">③ 開報價單俾客人</button>`)+
+ return topBar(`${CANP()?`<button onclick="replyToStyle('${D.id}')">工廠價記入款式</button>`:''}<button onclick="crFromSD('${D.id}')">📦 寄快遞</button><button onclick="qtFromSD('${D.id}')">③ 開報價單俾客人</button>`)+
  `<div class="card"><div class="form">${F('樣板單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${F('開發款號 *',sel(P+'.devNo',styleOpts(),{r:1}))}${F('工廠',sel(P+'.fac',facOpts()))}${F('客戶',sel(P+'.cust',custOpts()))}
  ${F('樣板類型',sel(P+'.stype',SAMPLE_TYPES))}${F('數量',inp(P+'.qty'))}${F('樣板碼數',inp(P+'.sampleSize',{ph:'例如 EU 30 左右腳'}))}${F('顏色',inp(P+'.colors'))}${F('要求交樣日',inp(P+'.due',{type:'date'}))}
- ${F('狀態',sel(P+'.status',SAMPLE_STATUS))}${F('速遞單號',inp(P+'.courier'))}${F('客人意見',inp(P+'.feedback'),'wide')}</div></div>
+ ${F('狀態',sel(P+'.status',SAMPLE_STATUS))}${F('速遞單號',inp(P+'.courier'))}${crOfSD(D.id).length?`<div class="wide"><label>快遞記錄</label><div style="padding:4px 0">${crOfSD(D.id).map(c=>link(c,c.no)+' '+esc(c.courier)+' '+trackLink(c)+' '+badge(c.status)).join('　')}</div></div>`:''}${F('客人意見',inp(P+'.feedback'),'wide')}</div></div>
  <div class="card"><h3>圖片</h3>${s.images?.length?`<p class="muted">由開發款式 ${esc(s.devNo)} 帶入：</p><div class="imgbox">${s.images.map(x=>`<div class="im"><img src="${x}"></div>`).join('')}</div>`:''}<p class="muted">另加圖片（只限呢張樣板單）：</p>${imgBox(P+'.images')}</div>
  <div class="card"><h3>物料規格</h3><table class="grid" style="width:100%"><tr><th>部位</th><th>物料 Material</th><th>顏色 Color</th><th>備註</th></tr>${D.parts.map((p,k)=>`<tr><td>${inp(`${P}.parts.${k}.part`,{st:'background:#fff;color:#000;font-weight:bold'})}</td><td>${inp(`${P}.parts.${k}.mat`)}</td><td>${inp(`${P}.parts.${k}.color`)}</td><td>${inp(`${P}.parts.${k}.rem`)}</td></tr>`).join('')}</table>
  <div class="form" style="margin-top:10px">${F('特別要求',ta(P+'.special'),'wide')}</div></div>
@@ -581,12 +591,12 @@ function homeView(){const days=S.lastBackup?Math.floor((Date.now()-new Date(S.la
  const steps=[['STY','① 開發款式','有圖 → 開發號碼、碼段、顏色'],['SD','② 樣板單','發工廠做樣板 + 樣板追蹤'],['QT','③ 報價單','樣板完成 → 報價俾客人'],['CO','④ 客人訂單','客人確認 → 落 PO 俾你'],['PO','⑤ 採購單','每款一張俾工廠 + 生產追蹤'],['PL','⑥ Packing List','生產完成 → 裝箱明細'],['INV','⑦ Invoice','向客人收款']];
  return `<h2>首頁</h2>${days===null||days>7?`<div class="card warnbox">⚠ ${days===null?'你未下載過備份':`你已經 ${days} 日冇備份`}。資料只存喺呢個瀏覽器，請去 <a href="#backup">備份 / 還原</a> 下載備份檔。</div>`:''}
  <div class="flow">${steps.map(([k,a,b])=>`<a href="#${k}" class="fstep"><b>${a}</b><span>${b}</span></a>`).join('<span class="arr">→</span>')}</div>
- <div class="kpis"><a class="kpi" href="#tsample">進行中樣板<b>${sds.length}</b></a><a class="kpi" href="#QT">等回覆報價<b>${qts.length}</b></a><a class="kpi" href="#tprod">生產中採購單<b>${pos.length}</b></a>${CANP()?`<a class="kpi" href="#tpay">已出 Invoice 未收<b>${f2(out)}</b></a>`:''}</div>
+ <div class="kpis"><a class="kpi" href="#tsample">進行中樣板<b>${sds.length}</b></a><a class="kpi" href="#QT">等回覆報價<b>${qts.length}</b></a><a class="kpi" href="#tprod">生產中採購單<b>${pos.length}</b></a><a class="kpi" href="#CR">運送中快遞<b>${docsOf('CR',d=>['已寄出','運送中'].includes(d.status)).length}</b></a>${CANP()?`<a class="kpi" href="#tpay">已出 Invoice 未收<b>${f2(out)}</b></a>`:''}</div>
  <div class="card"><h3>⚠ 延誤 / 要跟進</h3>${lateS.length||lateP.length?`<table class="list">${lateS.map(d=>`<tr class="late"><td>樣板</td><td>${link(d)}</td><td>${esc(d.devNo)}</td><td>${esc(findFac(d.fac).name||'')}</td><td>${stageBar(d.stages)}</td><td>要求交樣 ${esc(d.due)}</td></tr>`).join('')}${lateP.map(p=>`<tr class="late"><td>生產</td><td>${link(p)}</td><td>${esc(p.devNo)}</td><td>${esc(findFac(p.fac).name||'')}</td><td>${stageBar(p.stages)}</td><td>交貨期 ${esc(p.delivery)}</td></tr>`).join('')}</table>`:'<span class="muted">冇延誤 👍</span>'}</div>`}
 
 /* =================== 資料 =================== */
 function companyView(){const L=[['en','公司英文名稱'],['cn','公司中文名稱'],['addr','地址 Address'],['tel','電話 Tel'],['email','電郵 Email'],['contact','聯絡人 Contact'],['currency','預設貨幣'],['pol','預設出貨港 Port of Loading'],['origin','原產地 Country of Origin'],['bank','銀行名稱'],['bankAddr','銀行地址'],['accName','戶口名稱'],['accNo','戶口號碼'],['swift','SWIFT Code']];
- return `<h2>公司資料</h2><p class="muted">所有單據抬頭同銀行資料都會用呢度。</p><div class="card"><div class="form">${L.map(([k,l])=>F(l,inp('company.'+k),k==='addr'?'wide':'')).join('')}</div></div>`}
+ return `<h2>公司資料</h2><p class="muted">所有單據抬頭同銀行資料都會用呢度。</p><div class="card"><div class="form">${L.map(([k,l])=>F(l,inp('company.'+k),k==='addr'?'wide':'')).join('')}</div></div>${locationsCard()}`}
 const MASTER={customers:{title:'客戶',cols:[['code','客戶編號',80],['name','公司名稱',200],['addr','地址',260],['attn','聯絡人',130],['tel','電話',120],['email','電郵',170],['country','國家',90],['payment','付款條款',200],['incoterm','貿易條款',70],['currency','貨幣',60],['dest','目的港',100],['note','備註',120]]},
  factories:{title:'工廠',cols:[['code','工廠編號',80],['name','工廠名稱',200],['addr','地址',260],['attn','聯絡人',100],['tel','電話 / 微信',130],['email','電郵',170],['payment','付款條款',180],['note','備註',140]]}};
 function masterView(k){const M=MASTER[k];return `<h2>${M.title}</h2><div class="bar"><button class="pri" onclick="S.${k}.push({id:uid()});save();render()">＋ 新增${M.title}</button><span class="muted">直接喺格度改，自動儲存。</span></div>
@@ -684,6 +694,7 @@ function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=
   ${cp&&dep?`<tr><td colspan="7" style="text-align:right">Less: Deposit Received</td><td class="r">(${f2(dep)})</td></tr><tr class="tot"><td colspan="7" style="text-align:right">BALANCE DUE</td><td class="r">${cur} ${f2(t.amt-dep)}</td></tr>`:''}</table>
   ${cp&&d.sayTotal?`<p><b>SAY TOTAL:</b> ${esc(d.sayTotal)}</p>`:''}
   <div class="two"><div>${p?`<div class="sec">PACKING SUMMARY</div>${kv([['Total Cartons:',f0(p.ctn)],['Total Pairs:',f0(p.prs)],['Total N.W.:',f1(p.nw)+' kg'],['Total G.W.:',f1(p.gw)+' kg'],['Measurement:',f3(p.cbm)+' CBM']],1)}`:''}</div><div>${bankBlock()}</div></div>${sign(['',''],[ours(),'Authorized Signature'])}`}
+ if(d.type==='CR')h+=crPrint(d);
  if(d.type==='CO'){const m=matrixPrint(d.lines,{price:cp?l=>l.price:null});h+=`<div class="title">ORDER DETAILS 訂單明細（內部）</div><div class="two">${custBlock(d)}<div>${kv([['客人 PO:',d.custPO],['Date:',d.date],['ETD:',d.etd],['Payment:',d.payment]])}</div></div>${m.h}<table class="t"><tr class="tot"><td style="text-align:right">GRAND TOTAL</td><td class="c" style="width:24mm">${f0(m.GQ)} Prs</td>${cp?`<td class="r" style="width:34mm">${cur} ${f2(m.GA)}</td>`:''}</tr></table>`}
  return h}
 let PREVIEW_ID=null;
@@ -696,7 +707,7 @@ function renderPreview(d){const land=isLand(d);
 const withTimeout=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
 // 即刻顯示預覽（相片先用縮圖），原相喺背後載入，載入完自動更新
 function preview(id){try{const d=docById(id);if(!d)return toast('搵唔到呢張單');PREVIEW_ID=id;renderPreview(d);window.scrollTo(0,0);
-  if(d.type==='SD'&&(d.notes||[]).some(n=>n.files.some(f=>f.img&&!ATT_URL[f.id]))){
+  if((d.notes||[]).some(n=>n.files.some(f=>f.img&&!ATT_URL[f.id]))){
    withTimeout(loadDocAtts(d),20000).then(miss=>{if(PREVIEW_ID===id&&document.body.classList.contains('preview'))renderPreview(d);if(miss)toast(`有 ${miss} 張相未同步到，暫時用縮圖`)}).catch(()=>toast('部分相片載入太耐，暫時用縮圖'))}}
  catch(e){showErr('開唔到預覽',e)}}
 function showErr(title,e){console.error(e);const b=document.getElementById('modalBox');b.style.maxWidth='520px';b.innerHTML=`<h3 style="margin-top:0">⚠ ${esc(title)}</h3><p>請截圖俾 Claude：</p><pre style="white-space:pre-wrap;background:#f6f6f6;padding:8px;font-size:12px">${esc((e&&(e.stack||e.message))||String(e))}\n${esc(navigator.userAgent)}</pre><div class="bar" style="justify-content:flex-end;margin:0"><button class="pri" onclick="closeModal()">關閉</button></div>`;document.getElementById('modal').style.display='flex'}
@@ -777,7 +788,7 @@ const normRC=s=>String(s||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
 
 /* ---- 價錢分離 ---- */
 const PRICE_STYLE=['factoryPrice','sellPrice','sampleCost'];
-const PRICE_DOC={SD:{f:['reply.cost','reply.bulk','reply.mould']},QT:{l:['price']},CO:{l:['price'],f:['payments']},PO:{f:['cost']},PI:{l:['price'],f:['sayTotal']},INV:{l:['price'],f:['sayTotal']}};
+const PRICE_DOC={CR:{f:['freight']},SD:{f:['reply.cost','reply.bulk','reply.mould']},QT:{l:['price']},CO:{l:['price'],f:['payments']},PO:{f:['cost']},PI:{l:['price'],f:['sayTotal']},INV:{l:['price'],f:['sayTotal']}};
 function delPath(o,p){const ks=pathKeys(p);const last=ks.pop();const t=ks.reduce((a,k)=>a==null?a:a[k],o);if(t&&typeof t==='object')delete t[last]}
 function splitData(s){(s.docs||[]).forEach(d=>(d.lines||[]).forEach(l=>{if(!l.lid)l.lid=uid()}));
  const G=JSON.parse(JSON.stringify(s));const P={styles:{},docs:{},auth:G.auth||{}};delete G.auth;
@@ -798,6 +809,7 @@ function fillMissingPrices(s){const st=n=>(s.styles||[]).find(x=>x.devNo===n)||{
   if(d.type==='PO'&&d.cost===undefined)d.cost=st(d.devNo).factoryPrice??'';
   if(d.type==='CO'&&d.payments===undefined)d.payments=[];
   if((d.type==='PI'||d.type==='INV')&&d.sayTotal===undefined)d.sayTotal='';
+  if(d.type==='CR'&&d.freight===undefined)d.freight='';
   (d.lines||[]).forEach(l=>{if(!['QT','CO','PI','INV'].includes(d.type)||l.price!==undefined)return;let p;
    if(d.type==='CO'){const q=doc(d.qtId);p=q?.lines.find(x=>x.devNo===l.devNo)?.price}
    if(d.type==='PI'||d.type==='INV'){const c=doc(d.coId);p=(c?.lines.find(x=>x.devNo===l.devNo&&x.color===l.color)||c?.lines.find(x=>x.devNo===l.devNo))?.price}
@@ -1167,7 +1179,7 @@ const contactRows=c=>[['公司','company'],['聯絡人','person'],['電話','pho
 
 /* ---- 編輯畫面：備註區 ---- */
 function notesCard(P){const notes=D.notes||[];const id=D.id;
- return `<div class="card"><h3>📝 備註（色卡、材料相、聯絡人）</h3><p class="muted">每條備註可以寫字、影相、加任何檔案（無限）。「🔍 影相認字」可以影卡片 / 色卡，自動讀出公司名、聯絡人、電話。列印時備註會放喺樣板單最後。</p>
+ return `<div class="card"><h3>📝 備註（色卡、材料相、聯絡人）</h3><p class="muted">每條備註可以寫字、影相、加任何檔案（無限）。「🔍 影相認字」可以影卡片 / 色卡，自動讀出公司名、聯絡人、電話。列印時備註會放喺單據最後。</p>
  ${notes.map((n,k)=>`<div class="note"><div class="nhead"><b>#${k+1}</b> <span class="muted">${esc(new Date(n.at).toLocaleString('zh-HK',{hour12:false}))}${n.by?' · '+esc(n.by):''}</span><span class="sp"></span><button class="sm del" onclick="noteDel('${id}','${n.id}')">✕ 刪除備註</button></div>
   ${ta(`${P}.notes.${k}.text`,60)}
   ${n.contact&&contactRows(n.contact).length?`<div class="ncontact">${contactRows(n.contact).map(([l,kk])=>`<span><b>${l}：</b>${kk==='phone'?esc(n.contact[kk]).split(/\s*[,，]\s*/).map(x=>`<a href="tel:${esc(x.replace(/[^\d+]/g,''))}">${esc(x)}</a>`).join('、'):esc(n.contact[kk])}</span>`).join('')}</div>`:''}
@@ -1264,6 +1276,88 @@ async function backupAtts(){const out={};let miss=0;for(const id of await allAtt
  if(!enc&&NC){try{const r=await ncFetch(NC,'GET','att/'+id+'.bin');if(r.ok){enc=new Uint8Array(await r.arrayBuffer());await idbPut('att:'+id,enc)}}catch(e){}}
  if(enc)out[id]=b64(enc);else miss++}return{atts:out,miss}}
 async function restoreAtts(atts){for(const[id,v]of Object.entries(atts||{})){await idbPut('att:'+id,unb64(v));await attQueue(id,true)}}
+
+/* =================== 寄快遞紀錄 + 快遞 Invoice =================== */
+// 公司寄件地點：未設定就用公司資料嘅地址做第一個
+function companyLocs(){const c=S.company;if(!Array.isArray(c.locations)||!c.locations.length)return[{id:'main',name:'總公司',addr:c.addr||'',tel:c.tel||'',contact:c.contact||'',email:c.email||''}];return c.locations}
+function ensureLocs(){if(!Array.isArray(S.company.locations)||!S.company.locations.length)S.company.locations=companyLocs().map(x=>({...x}));return S.company.locations}
+function locationsCard(){const L=companyLocs();const real=Array.isArray(S.company.locations)&&S.company.locations.length;
+ return `<div class="card"><h3>📍 寄件地點（寄快遞時揀用邊個）</h3><p class="muted">公司有幾個地方寄嘢，就喺度逐個加。寄快遞時「寄件人」可以揀。</p>
+ ${L.map((l,i)=>{const P=`company.locations.${i}`;return `<div class="note"><div class="form">${real?F('地點名稱',inp(P+'.name',{ph:'例如 屯門寫字樓'})):RO('地點名稱',l.name)}${real?F('聯絡人',inp(P+'.contact')):RO('聯絡人',l.contact)}${real?F('電話',inp(P+'.tel')):RO('電話',l.tel)}${real?F('電郵',inp(P+'.email')):RO('電郵',l.email)}${real?F('地址',inp(P+'.addr'),'wide'):RO('地址（用上面公司地址）',l.addr,'wide')}</div>
+ ${real&&L.length>1?`<div class="bar" style="margin:6px 0 0;justify-content:flex-end"><button class="sm del" onclick="ask('刪除呢個地點？',()=>{S.company.locations.splice(${i},1);save();render()})">✕ 刪除</button></div>`:''}</div>`}).join('')}
+ <div class="bar" style="margin:8px 0 0"><button onclick="ensureLocs();S.company.locations.push({id:uid(),name:'',addr:'',tel:S.company.tel||'',contact:S.company.contact||'',email:S.company.email||''});save();render()">＋ 加寄件地點</button>${real?'':'<button class="sm" onclick="ensureLocs();save();render()">✎ 改第一個地點</button>'}</div></div>`}
+
+const COURIERS=['DHL','FedEx','UPS','SF 順豐','TNT','EMS','中通','圓通','其他'];
+const CR_STATUS=['準備中','已寄出','運送中','已簽收','有問題','已退回'];
+const CR_CONTENTS=['樣板','文件','物料 / 色卡','大貨','其他'];
+const CR_REASONS=['Samples of no commercial value','Sample','Sale','Return / Repair','Gift','Documents'];
+const CR_PAYBY=['寄方付（我哋）','收方付（到付）','第三方帳號'];
+function trackURL(courier,no){no=String(no||'').replace(/\s/g,'');if(!no)return '';const e=encodeURIComponent(no);
+ if(/^DHL/i.test(courier))return 'https://www.dhl.com/hk-en/home/tracking/tracking-express.html?submit=1&tracking-id='+e;
+ if(/^FedEx|^TNT/i.test(courier))return 'https://www.fedex.com/fedextrack/?trknbr='+e;
+ if(/^UPS/i.test(courier))return 'https://www.ups.com/track?loc=zh_HK&tracknum='+e;
+ if(/^SF|順豐/i.test(courier))return 'https://www.sf-express.com/hk/tc/dynamic_function/waybill/#search/bill-number/'+e;
+ return 'https://www.google.com/search?q='+encodeURIComponent(courier+' '+no)}
+const trackLink=d=>d.awb?`<a href="${esc(trackURL(d.courier,d.awb))}" target="_blank" rel="noopener">${esc(d.awb)} ↗</a>`:'<span class="muted">未有運單號</span>';
+function crRecvFrom(d){if(d.toType==='cust'&&!d.cust)d.cust=S.customers[0]?.code||'';if(d.toType==='fac'&&!d.fac)d.fac=S.factories[0]?.code||'';
+ if(d.toType==='cust'){const c=findCust(d.cust);d.recv={company:c.name||'',attn:c.attn||'',addr:c.addr||'',tel:c.tel||'',email:c.email||'',country:c.country||''}}
+ else if(d.toType==='fac'){const f=findFac(d.fac);d.recv={company:f.name||'',attn:f.attn||'',addr:f.addr||'',tel:f.tel||'',email:f.email||'',country:'China'}}}
+const crSender=d=>{const l=d.sender&&d.sender.addr?d.sender:(companyLocs().find(x=>x.id===d.fromLoc)||companyLocs()[0]);return l};
+const crTotal=d=>(d.lines||[]).reduce((a,l)=>a+num(l.qty)*num(l.value),0);
+const crQty=d=>(d.lines||[]).reduce((a,l)=>a+num(l.qty),0);
+function crLineFromStyle(dn,qty){const s=findStyle(dn);return{devNo:dn,desc:`Children's shoes sample${s.name?' - '+s.name:''} (Style ${dn}${s.custStyle?' / '+s.custStyle:''})`,hs:s.hs||'6404.19',qty:qty||1,unit:'PRS',value:'',origin:S.company.origin||'China'}}
+function crFromSD(id){const sd=docById(id);const n=parseInt(String(sd.qty||'').replace(/\D/g,''))||1;
+ const d=newDoc('CR',{cust:sd.cust||S.customers[0]?.code||'',sdIds:[sd.id]});crRecvFrom(d);d.lines=[crLineFromStyle(sd.devNo,n)];
+ S.docs.push(d);save();toast('已開快遞記錄 '+d.no);go('CR',d.id)}
+const crOfSD=sdId=>docsOf('CR',d=>(d.sdIds||[]).includes(sdId));
+
+function crEditor(P){const R=P+'.recv';const own=CANP();const sds=docsOf('SD');
+ const SP=P+'.sender';const locs=companyLocs();
+ return topBar('')+`<div class="card"><h3>寄件人</h3><div class="form">${F('寄件地點',sel(P+'.fromLoc',locs.map(l=>[l.id,l.name||l.addr.slice(0,20)]),{r:1}))}${F('聯絡人',inp(SP+'.contact'))}${F('電話',inp(SP+'.tel'))}${F('電郵',inp(SP+'.email'))}${F('地址',inp(SP+'.addr'),'wide')}</div>
+ <p class="muted">地點喺「公司資料 → 📍 寄件地點」加。揀咗會自動帶入，呢張單可以再改。</p></div>
+ <div class="card"><h3>📦 快遞資料</h3><div class="form">
+ ${F('記錄號',inp(P+'.no'))}${F('寄出日期',inp(P+'.date',{type:'date'}))}${F('快遞公司',sel(P+'.courier',COURIERS,{r:1}))}${F('運單號 AWB / Tracking No.',inp(P+'.awb',{r:1,ph:'例如 1234567890'}))}
+ <div><label>追蹤</label><div style="padding:6px 0">${trackLink(D)}</div></div>${F('狀態',sel(P+'.status',CR_STATUS))}${F('簽收日期',inp(P+'.delivered',{type:'date'}))}${F('內容',sel(P+'.contents',CR_CONTENTS))}
+ ${F('件數',inp(P+'.pkgs',{n:1}))}${F('總重量 kg',inp(P+'.weight',{n:1}))}${F('尺寸 cm（長×闊×高）',inp(P+'.dims',{ph:'例如 40×30×20'}))}${F('運費付款',sel(P+'.payBy',CR_PAYBY))}
+ ${F('付款帳號（到付 / 第三方）',inp(P+'.acct',{ph:'例如客人 DHL 帳號'}))}${own?F('運費（我哋成本）',inp(P+'.freight',{n:1})):''}</div></div>
+ <div class="card"><h3>收件人</h3><div class="form">${F('寄俾',sel(P+'.toType',[['cust','客戶'],['fac','工廠'],['other','其他（自己填）']],{r:1}))}
+ ${D.toType==='cust'?F('客戶',sel(P+'.cust',custOpts(),{r:1})):D.toType==='fac'?F('工廠',sel(P+'.fac',facOpts(),{r:1})):''}
+ ${F('公司',inp(R+'.company'),'w2')}${F('收件人 Attn',inp(R+'.attn'))}${F('電話',inp(R+'.tel'))}${F('電郵',inp(R+'.email'))}${F('國家',inp(R+'.country'))}${F('地址',ta(R+'.addr',50),'wide')}</div>
+ <p class="muted">揀客戶 / 工廠會自動帶入地址電話，之後可以改。</p></div>
+ <div class="card"><h3>相關樣板單</h3><div class="bar">${(D.sdIds||[]).map((id,k)=>{const s=docById(id);return s?`<span class="chip on sel">${link(s,s.no+' '+(s.devNo||''))}<i onclick="D.sdIds.splice(${k},1);save();render()">✕</i></span>`:''}).join('')||'<span class="muted">未有</span>'}
+ <select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value&&!D.sdIds.includes(this.value)){D.sdIds.push(this.value);const s=docById(this.value);if(s&&s.devNo&&!D.lines.some(l=>l.devNo===s.devNo))D.lines.push(crLineFromStyle(s.devNo,parseInt(String(s.qty||'').replace(/\\D/g,''))||1));save();render()}"><option value="">＋ 加樣板單</option>${sds.map(s=>`<option value="${s.id}">${esc(s.no)} ${esc(s.devNo||'')} ${esc(findCust(s.cust).name||'')}</option>`).join('')}</select></div></div>
+ <div class="card"><h3>快遞 Invoice 內容（報關用）</h3><div class="form">${F('單據標題',sel(P+'.title',['PROFORMA INVOICE','COMMERCIAL INVOICE']))}${F('出口原因 Reason for Export',sel(P+'.reason',CR_REASONS))}${F('貿易條款',sel(P+'.incoterm',['DAP','DDP','EXW','FOB','CIF']))}${F('貨幣',inp(P+'.currency'))}</div>
+ <div class="scroll" style="margin-top:10px"><table class="grid"><tr><th>#</th><th>貨品描述 Description</th><th>款號</th><th>HS Code</th><th>數量</th><th>單位</th><th>申報單價</th><th>金額</th><th>原產地</th><th></th></tr>
+ ${D.lines.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${inp(`${P}.lines.${i}.desc`,{w:300})}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts('—'),{w:130})}</td><td>${inp(`${P}.lines.${i}.hs`,{w:85})}</td><td>${inp(`${P}.lines.${i}.qty`,{n:1,w:60})}</td><td>${sel(`${P}.lines.${i}.unit`,['PRS','PCS','SET','KG','DOC'],{w:70})}</td><td>${inp(`${P}.lines.${i}.value`,{n:1,w:75})}</td><td class="c">${calc('cv'+i,()=>{const x=D.lines[i];return x?f2(num(x.qty)*num(x.value)):''})}</td><td>${inp(`${P}.lines.${i}.origin`,{w:70})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`).join('')}
+ <tr class="tot"><td colspan="4" style="text-align:right">TOTAL</td><td class="c">${calc('cq',()=>f0(crQty(D)))}</td><td></td><td class="c">${esc(D.currency||'')}</td><td class="c">${calc('ct',()=>f2(crTotal(D)))}</td><td colspan="2"></td></tr></table></div>
+ <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){D.lines.push(crLineFromStyle(this.value,1));save();render()}">${styleOpts('＋ 加款式樣板').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select>
+ <button class="sm" onclick="D.lines.push({devNo:'',desc:'',hs:'',qty:1,unit:'PCS',value:'',origin:S.company.origin||'China'});save();render()">＋ 加其他貨品</button>
+ <span class="muted">申報價值係報關用嘅價值（樣板通常申報細額），唔係報俾客人嘅價錢。</span></div>
+ <div class="form" style="margin-top:10px">${F('Invoice 備註',inp(P+'.remark',{ph:'例如 For evaluation only, not for resale.'}),'wide')}</div></div>
+ ${notesCard(P)}`}
+
+function crPrint(d){const c=S.company,r=d.recv||{},tot=crTotal(d),se=crSender(d);
+ return `<div class="title">${esc(d.title||'PROFORMA INVOICE')}</div>
+ <div class="two"><div><b>Shipper / Exporter:</b><br><b>${esc(c.en)}</b><br>${esc(se.addr||'')}${se.tel?'<br>Tel: '+esc(se.tel):''}${se.contact?'<br>Contact: '+esc(se.contact):''}${se.email?'<br>Email: '+esc(se.email):''}</div>
+ <div><b>Consignee / Receiver:</b><br><b>${esc(r.company||'')}</b><br>${esc(r.addr||'').replace(/\n/g,'<br>')}${r.country?'<br>'+esc(r.country):''}${r.attn?'<br>Attn: '+esc(r.attn):''}${r.tel?'<br>Tel: '+esc(r.tel):''}${r.email?'<br>Email: '+esc(r.email):''}</div></div>
+ <table class="t"><tr><td class="lb">Invoice No.</td><td>${esc(d.no)}</td><td class="lb">Date</td><td>${esc(d.date)}</td></tr>
+ <tr><td class="lb">Courier</td><td>${esc(d.courier)}</td><td class="lb">AWB / Tracking No.</td><td>${esc(d.awb||'')}</td></tr>
+ <tr><td class="lb">Reason for Export</td><td>${esc(d.reason)}</td><td class="lb">Terms of Delivery</td><td>${esc(d.incoterm||'')}</td></tr>
+ <tr><td class="lb">No. of Packages</td><td>${esc(d.pkgs||'')}</td><td class="lb">Total Gross Weight</td><td>${d.weight?esc(d.weight)+' kg':''}</td></tr>
+ <tr><td class="lb">Dimensions</td><td>${esc(d.dims||'')}${d.dims?' cm':''}</td><td class="lb">Country of Origin</td><td>${esc(c.origin||'')}</td></tr></table>
+ <table class="t"><tr><th>No.</th><th>Full Description of Goods</th><th>HS Code</th><th>Qty</th><th>Unit</th><th>Unit Value</th><th>Total Value (${esc(d.currency||'')})</th><th>Origin</th></tr>
+ ${d.lines.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.desc)}</td><td class="c">${esc(l.hs)}</td><td class="c">${f0(l.qty)}</td><td class="c">${esc(l.unit)}</td><td class="r">${f2(l.value)}</td><td class="r">${f2(num(l.qty)*num(l.value))}</td><td class="c">${esc(l.origin||'')}</td></tr>`).join('')}
+ <tr class="tot"><td colspan="3" style="text-align:right">TOTAL</td><td class="c">${f0(crQty(d))}</td><td></td><td></td><td class="r">${esc(d.currency||'')} ${f2(tot)}</td><td></td></tr></table>
+ ${/no commercial/i.test(d.reason)?'<p style="font-size:10px"><b>Samples of no commercial value, for evaluation purpose only. Not for resale.</b> Value declared for customs purpose only.</p>':''}
+ ${d.remark?`<p style="font-size:10px">${esc(d.remark)}</p>`:''}
+ <p style="font-size:10px">I hereby certify that the information on this invoice is true and correct and the contents of this shipment are as stated above.</p>
+ ${sign(['',''],[`<b>Signature of Shipper</b><br><span style="font-size:9px">${esc(c.en)}${se.contact?' · '+esc(se.contact):''}</span>`,'Name / Signature / Date'])}${notesPrint(d)}`}
+
+function crLogExtra(){const list=docsOf('CR');const moving=list.filter(d=>['已寄出','運送中'].includes(d.status)).length;
+ return `<div class="bar" style="margin-top:-6px"><span class="muted">運送中：<b>${moving}</b> 件</span><span class="sp"></span><button class="sm" onclick="crCSV()">⬇ 匯出快遞紀錄 CSV</button></div>`}
+function crCSV(){const rows=[['記錄號','寄出日期','寄件地點','快遞公司','運單號','收件公司','收件人','國家','內容','件數','重量kg','狀態','簽收日期','相關樣板單',...(CANP()?['運費']:[])]];
+ docsOf('CR').forEach(d=>rows.push([d.no,d.date,crSender(d).name||'',d.courier,d.awb,d.recv?.company,d.recv?.attn,d.recv?.country,d.contents,d.pkgs,d.weight,d.status,d.delivered,(d.sdIds||[]).map(id=>docById(id)?.no||'').join(' '),...(CANP()?[d.freight??'']:[])]));
+ download(`寄快遞紀錄-${today()}.csv`,'﻿'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),'text/csv')}
 
 boot();
 </script>
