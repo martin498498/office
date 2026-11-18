@@ -227,6 +227,20 @@ label.btn.sm{padding:4px 10px;font-size:13px}
 .chip.sel a{color:#fff}
 
 #crm .mrow.on td{background:#e8eefb}
+
+.doc .jpgrid{display:grid;grid-template-columns:1fr 1fr;gap:4mm 5mm;margin-top:3mm}
+.doc .jpgrid.jppg{page-break-before:always;break-before:page;padding-top:2mm}
+.doc .jpb{break-inside:avoid;page-break-inside:avoid}
+.doc .jpno{font-size:9.5px;font-weight:bold;margin-bottom:1px;height:4mm;overflow:hidden;white-space:nowrap}
+.doc table.jpt{width:100%;border-collapse:collapse;table-layout:fixed;font-family:"Hiragino Sans","Yu Gothic","Noto Sans JP","Microsoft JhengHei",sans-serif}
+.doc table.jpt td{border:1px solid #333;padding:1px 4px;font-size:10px;height:5.2mm;line-height:1.15;word-break:break-all;overflow:hidden}
+.doc table.jpt td.jl{width:24%;white-space:nowrap}
+.doc table.jpt td.c{text-align:center}.doc table.jpt td.r{text-align:right}
+.doc table.jpt td.jpimg{height:20mm;text-align:center;padding:1px}
+.doc table.jpt td.jpimg img{max-width:100%;max-height:19.5mm;object-fit:contain}
+.doc table.jpt td.jpsz{font-size:11px}
+.doc table.jpt td.jrem{height:8mm;vertical-align:top;font-size:9px}
+.doc table.jpt td.jl.jrem{vertical-align:middle;text-align:center}
 </style>
 </head>
 <body>
@@ -322,14 +336,14 @@ function newDoc(type,extra={}){
  if(type==='SD'){const st=findStyle(extra.devNo);Object.assign(d,{devNo:extra.devNo||'',cust:st.cust||c0,fac:st.factory||S.factories[0]?.code||'',stype:'初樣',qty:'1 pair',sampleSize:'',colors:st.colors||'',due:addDays(today(),14),images:[],
   parts:SD_PARTS.map(p=>({part:p,mat:p.startsWith('鞋面 ')?st.upper||'':p.startsWith('內裡')?st.lining||'':p.startsWith('大底')?st.sole||'':'',color:'',rem:''})),special:'',reply:{cost:'',bulk:'',mould:'',lead:'',moq:'',delivered:''},
   stages:stagesFrom(S.settings.sampleStages),status:'進行中',courier:'',feedback:''})}
- if(type==='QT')Object.assign(d,{cust:c0,valid:addDays(today(),30),leadTime:'45-60 days after sample approval and deposit received',packing:'Each pair in color box, export carton',sample:'Sample cost refundable upon bulk order',remarks:'Prices based on current material costs.',status:'等客人回覆'});
+ if(type==='QT')Object.assign(d,{fmt:custQtFmt(findCust(c0)),cust:c0,valid:addDays(today(),30),leadTime:'45-60 days after sample approval and deposit received',packing:'Each pair in color box, export carton',sample:'Sample cost refundable upon bulk order',remarks:'Prices based on current material costs.',status:'等客人回覆'});
  if(type==='CO')Object.assign(d,{cust:c0,custPO:'',qtId:'',etd:'',payment:findCust(c0).payment||'',payments:[],status:'進行中'});
  if(type==='PO')Object.assign(d,{fac:'',coId:'',devNo:'',custPO:'',delivery:'',cost:'',req:{mat:'按確認樣',pack:'每對入彩盒，每箱 12 對',mark:'正嘜：客人LOGO / PO No. / Style / Color / C/No.　側嘜：Size / Qty / N.W. / G.W. / Made in China',qc:'需通過 EN71-3 / REACH 測試；大貨須與確認樣一致',insp:'出貨前 AQL 2.5 驗貨，合格後方可出貨',rem:'如未能按時交貨，請提前通知'},stages:stagesFrom(S.settings.prodStages)});
  if(type==='PL')Object.assign(d,{cust:c0,coId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',marks:''});
  if(type==='INV')Object.assign(d,{cust:c0,coId:'',plId:'',custPO:'',from:S.company.pol,to:findCust(c0).dest||'',vessel:'',sayTotal:'',lessDeposit:false});
  if(type==='CR')Object.assign(d,{fromLoc:companyLocs()[0].id,sender:{...companyLocs()[0]},courier:'DHL',awb:'',status:'已寄出',delivered:'',contents:'樣板',pkgs:1,weight:'',dims:'',payBy:CR_PAYBY[0],acct:'',freight:'',freightCur:(()=>{try{return localStorage.getItem('so-fcur')||'HKD'}catch(e){return 'HKD'}})(),toType:'cust',cust:c0,fac:'',recv:{},sdIds:[],title:'PROFORMA INVOICE',reason:CR_REASONS[0],incoterm:'DAP',currency:S.company.currency||'USD',remark:'',notes:[]});
  if(type==='PI')Object.assign(d,{title:'PROFORMA INVOICE',cust:c0,coId:'',custPO:'',etd:'',packing:'Each pair in color box, export carton',remarks:'Quantity tolerance ±3%.',sayTotal:''});
- Object.assign(d,extra);if(type==='CR'&&!(d.recv&&d.recv.company))crRecvFrom(d);return d}
+ Object.assign(d,extra);if(type==='QT'&&extra.cust)d.fmt=custQtFmt(findCust(d.cust));if(type==='CR'&&!(d.recv&&d.recv.company))crRecvFrom(d);return d}
 
 /* =================== 計算 =================== */
 function coTotals(co){let qty=0,amt=0,cost=0;co.lines.forEach(l=>{const q=qtyTot(l.qty);qty+=q;amt+=q*num(l.price);cost+=q*num(findStyle(l.devNo).factoryPrice)});return{qty,amt,cost}}
@@ -356,7 +370,7 @@ const custOpts=()=>[['','— 揀客戶 —'],...S.customers.map(c=>[c.code,c.cod
 const facOpts=()=>[['','— 揀工廠 —'],...S.factories.map(c=>[c.code,c.code+'  '+c.name])];
 const styleOpts=(first='— 揀款號 —')=>[['',first],...S.styles.map(s=>[s.devNo,s.devNo+'  '+(s.name||'')])];
 document.addEventListener('input',e=>{const t=e.target,p=t.dataset.p;if(!p||t.type==='file')return;let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.n)v=v===''?'':+v;setPath(S,p,v);save();if(!t.dataset.r)refreshCalc()});
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.p&&t.dataset.r){if(t.dataset.p.endsWith('.cust')&&D&&D.to!==undefined){D.to=findCust(D.cust).dest||D.to}if(t.dataset.p.endsWith('.cust')&&D&&D.type==='CO')D.payment=findCust(D.cust).payment||D.payment;
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.p&&t.dataset.r){if(t.dataset.p.endsWith('.cust')&&D&&D.to!==undefined){D.to=findCust(D.cust).dest||D.to}if(t.dataset.p.endsWith('.cust')&&D&&D.type==='QT')D.fmt=custQtFmt(findCust(D.cust));if(t.dataset.p.endsWith('.cust')&&D&&D.type==='CO')D.payment=findCust(D.cust).payment||D.payment;
  if(D&&D.type==='CR'&&/\.(cust|fac|toType)$/.test(t.dataset.p))crRecvFrom(D);
  if(D&&D.type==='CR'&&/\.freightCur$/.test(t.dataset.p)){try{localStorage.setItem('so-fcur',D.freightCur)}catch(e){}}
  if(D&&D.type==='CR'&&/\.fromLoc$/.test(t.dataset.p)){const l=companyLocs().find(x=>x.id===D.fromLoc);if(l)D.sender={...l}}
@@ -520,11 +534,11 @@ function sdEditor(P){const s=findStyle(D.devNo);
  ${stagesCard(P+'.stages','樣板追蹤')}
  ${notesCard(P)}`}
 function qtEditor(P){return topBar(`<button onclick="coFromQT('${D.id}')">✓ 客人確認 → ④ 輸入客人 PO</button>`)+
- `<div class="card"><div class="form">${F('報價單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('有效期至',inp(P+'.valid',{type:'date'}))}${RO('貨幣 / 價格條款',curOf(D)+' / '+priceTerm(D))}${F('狀態',sel(P+'.status',['等客人回覆','客人已確認','需重新報價','冇落單']))}
+ `<div class="card"><div class="form">${F('報價單號',inp(P+'.no'))}${F('日期',inp(P+'.date',{type:'date'}))}${custFields(P)}${F('有效期至',inp(P+'.valid',{type:'date'}))}${F('報價格式',sel(P+'.fmt',QT_FMTS,{r:1}))}${RO('貨幣 / 價格條款',curOf(D)+' / '+priceTerm(D))}${F('狀態',sel(P+'.status',['等客人回覆','客人已確認','需重新報價','冇落單']))}
  ${F('交貨期 Lead Time',inp(P+'.leadTime'),'wide')}${F('包裝 Packing',inp(P+'.packing'),'wide')}${F('樣板 Sample',inp(P+'.sample'),'wide')}${F('備註 Remarks',inp(P+'.remarks'),'wide')}</div></div>
  <div class="card"><h3>報價款式</h3><div class="scroll"><table class="grid"><tr><th>圖</th><th>款號</th><th>品名</th><th>碼段</th><th>顏色</th><th>MOQ (雙)</th>${CANP()?'<th>報價</th><th>工廠價</th><th>毛利率</th>':''}<th>備註</th><th></th></tr>
  ${D.lines.map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td>${thumb(imgOf(l.devNo),40)}</td><td>${sel(`${P}.lines.${i}.devNo`,styleOpts(),{r:1,w:150})}</td><td class="c">${esc(s.name||'')}</td><td class="c">${esc(s.sizeRange||'')}</td><td>${inp(`${P}.lines.${i}.colors`,{w:150})}</td><td>${inp(`${P}.lines.${i}.moq`,{n:1,w:70})}</td>${CANP()?`<td>${inp(`${P}.lines.${i}.price`,{n:1,w:70})}</td><td class="c">${s.factoryPrice!==''&&s.factoryPrice!=null?f2(s.factoryPrice):'—'}</td><td class="c">${calc('m'+i,()=>{const l2=D.lines[i];const a=num(l2?.price),b=num(findStyle(l2?.devNo).factoryPrice);return a&&b?pct(a-b,a):'—'})}</td>`:''}<td>${inp(`${P}.lines.${i}.rem`,{w:160})}</td><td><button class="sm del" onclick="D.lines.splice(${i},1);save();render()">✕</button></td></tr>`}).join('')}</table></div>
- <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){const s=findStyle(this.value);D.lines.push({devNo:s.devNo,colors:s.colors,moq:'',...(CANP()?{price:s.sellPrice??''}:{}),rem:''});save();render()}">${styleOpts('＋ 加款式').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select><span class="muted">${CANP()?'工廠價同毛利率只會喺呢度顯示，唔會印出嚟。':'🔒 報價由負責人填寫。'}</span></div></div>`}
+ <div class="bar" style="margin:8px 0 0"><select style="width:auto;background:#fff;color:#1f3864;border-color:#1f3864" onchange="if(this.value){const s=findStyle(this.value);D.lines.push({devNo:s.devNo,colors:s.colors,moq:'',...(CANP()?{price:s.sellPrice??''}:{}),rem:''});save();render()}">${styleOpts('＋ 加款式').map(([a,b])=>`<option value="${esc(a)}">${esc(b)}</option>`).join('')}</select><span class="muted">${CANP()?'工廠價同毛利率只會喺呢度顯示，唔會印出嚟。':'🔒 報價由負責人填寫。'}</span></div></div>`+jpEditor(P)}
 function coEditor(P){const t=coTotals(D);const pos=docsOf('PO',p=>p.coId===D.id),pls=docsOf('PL',p=>p.coId===D.id),invs=docsOf('INV',p=>p.coId===D.id),pis=docsOf('PI',p=>p.coId===D.id);const qt=docById(D.qtId);
  const packed=packedBy(D.id);
  return topBar(`<button onclick="genPOs('${D.id}')">⑤ 生成採購單（每款一張）</button><button onclick="plFromCO('${D.id}')">⑥ 開 Packing List</button><button onclick="piFromCO('${D.id}')">開 PI（可選）</button>`)+
@@ -600,10 +614,11 @@ function homeView(){const days=S.lastBackup?Math.floor((Date.now()-new Date(S.la
 /* =================== 資料 =================== */
 function companyView(){const L=[['en','公司英文名稱'],['cn','公司中文名稱'],['addr','地址 Address'],['tel','電話 Tel'],['email','電郵 Email'],['contact','聯絡人 Contact'],['currency','預設貨幣'],['pol','預設出貨港 Port of Loading'],['origin','原產地 Country of Origin'],['bank','銀行名稱'],['bankAddr','銀行地址'],['accName','戶口名稱'],['accNo','戶口號碼'],['swift','SWIFT Code']];
  return `<h2>公司資料</h2><p class="muted">所有單據抬頭同銀行資料都會用呢度。</p><div class="card"><div class="form">${L.map(([k,l])=>F(l,inp('company.'+k),k==='addr'?'wide':'')).join('')}</div></div>${locationsCard()}`}
-const MASTER={customers:{title:'客戶',cols:[['code','客戶編號',80],['name','公司名稱',200],['addr','地址',260],['attn','聯絡人',130],['tel','電話',120],['email','電郵',170],['country','國家',90],['payment','付款條款',200],['incoterm','貿易條款',70],['currency','貨幣',60],['dest','目的港',100],['note','備註',120]]},
+const QT_FMTS=[['std','標準格式 (英文)'],['jp','日本格式（F.O. 見積書）']];
+const MASTER={customers:{title:'客戶',cols:[['code','客戶編號',80],['name','公司名稱',200],['addr','地址',260],['attn','聯絡人',130],['tel','電話',120],['email','電郵',170],['country','國家',90],['payment','付款條款',200],['incoterm','貿易條款',70],['currency','貨幣',60],['dest','目的港',100],['qtFmt','報價格式',150,QT_FMTS],['note','備註',120]]},
  factories:{title:'工廠',cols:[['code','工廠編號',80],['name','工廠名稱',200],['addr','地址',260],['attn','聯絡人',100],['tel','電話 / 微信',130],['email','電郵',170],['payment','付款條款',180],['note','備註',140]]}};
 function masterView(k){const M=MASTER[k];return `<h2>${M.title}</h2><div class="bar"><button class="pri" onclick="S.${k}.push({id:uid()});save();render()">＋ 新增${M.title}</button><span class="muted">直接喺格度改，自動儲存。</span></div>
- <div class="scroll"><table class="grid"><tr>${M.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${S[k].map((r,i)=>`<tr>${M.cols.map(([f,,w])=>`<td>${inp(`${k}.${i}.${f}`,{w})}</td>`).join('')}<td><button class="sm del" onclick="ask('確定刪除？',()=>{S.${k}.splice(${i},1);save();render()})">✕</button></td></tr>`).join('')}</table></div>`}
+ <div class="scroll"><table class="grid"><tr>${M.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${S[k].map((r,i)=>`<tr>${M.cols.map(([f,,w,o])=>`<td>${o?sel(`${k}.${i}.${f}`,[['','自動'],...o],{w}):inp(`${k}.${i}.${f}`,{w})}</td>`).join('')}<td><button class="sm del" onclick="ask('確定刪除？',()=>{S.${k}.splice(${i},1);save();render()})">✕</button></td></tr>`).join('')}</table></div>`}
 function settingsView(){return `<h2>追蹤階段設定</h2><p class="muted">每行一個階段。改完之後只會影響<b>新開</b>嘅樣板單 / 採購單；舊單可以喺單入面自己加減階段。</p>
  <div class="two-col"><div class="card"><h3>樣板追蹤階段</h3><textarea style="min-height:240px" oninput="S.settings.sampleStages=this.value.split('\\n').map(x=>x.trim()).filter(Boolean);save()">${esc(S.settings.sampleStages.join('\n'))}</textarea></div>
  <div class="card"><h3>生產追蹤階段</h3><textarea style="min-height:240px" oninput="S.settings.prodStages=this.value.split('\\n').map(x=>x.trim()).filter(Boolean);save()">${esc(S.settings.prodStages.join('\n'))}</textarea></div></div>`}
@@ -664,7 +679,8 @@ function docHTML(d){const c=S.company,cu=findCust(d.cust),fa=findFac(d.fac),cur=
   <div class="sec">特別要求 Special Requirements</div><div class="box">${esc(d.special)}</div>
   <div class="sec">工廠回覆 Factory Reply</div><table class="t">${[['樣板費 Sample Cost',d.reply.cost,'大貨價 Bulk Price',d.reply.bulk],['開模費 Mould Cost',d.reply.mould,'生產期 Lead Time',d.reply.lead],['MOQ',d.reply.moq,'實際交樣 Delivered',d.reply.delivered]].map(r=>`<tr><td class="lb">${r[0]}</td><td style="width:30%">${esc(r[1])}</td><td class="lb">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
   ${sign(['','開單人 Prepared by'],['','工廠確認 Factory Confirm'])}${notesPrint(d)}`}
- if(d.type==='QT'){h+=`<div class="title">QUOTATION</div><div class="two">${custBlock(d)}<div>${kv([['Quotation No.:',d.no],['Date:',d.date],['Valid Until:',d.valid],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>
+ if(d.type==='QT'&&d.fmt==='jp')h+=jpPrint(d,cp);
+ else if(d.type==='QT'){h+=`<div class="title">QUOTATION</div><div class="two">${custBlock(d)}<div>${kv([['Quotation No.:',d.no],['Date:',d.date],['Valid Until:',d.valid],['Currency:',cur],['Price Term:',priceTerm(d)]])}</div></div>
   <table class="t"><tr><th>No.</th><th>Picture</th><th>Style No.</th><th>Description</th><th>Material</th><th>Size Range</th><th>Colors</th><th>MOQ (Prs)</th>${cp?`<th>Unit Price (${cur})</th>`:''}<th>Remarks</th></tr>
   ${d.lines.filter(l=>l.devNo).map((l,i)=>{const s=findStyle(l.devNo);return `<tr><td class="c">${i+1}</td><td class="c" style="width:30mm;height:24mm">${imgOf(l.devNo)?`<img src="${imgOf(l.devNo)}">`:''}</td><td class="c">${esc(l.devNo)}${s.custStyle?'<br><span style="font-size:9px">('+esc(s.custStyle)+')</span>':''}</td><td>${esc(s.name)}</td><td>${esc([s.upper,s.lining,s.sole].filter(Boolean).join(' / '))}</td><td class="c">${esc(s.sizeRange)}</td><td class="c">${esc(l.colors)}</td><td class="c">${l.moq===''?'':f0(l.moq)}</td>${cp?`<td class="r"><b>${f2(l.price)}</b></td>`:''}<td>${esc(l.rem)}</td></tr>`}).join('')}</table>
   <div class="sec">TERMS & CONDITIONS</div>${kv([['Payment:',cu.payment||''],['Lead Time:',d.leadTime],['Port of Loading:',c.pol],['Packing:',d.packing],['Sample:',d.sample],['Remarks:',d.remarks]],1)}
@@ -727,7 +743,7 @@ async function savePDF(){if(pdfBusy)return;const d=docById(PREVIEW_ID);const el=
   await Promise.all([...el.querySelectorAll('img')].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r;setTimeout(r,8000)})));
   const z=el.style.zoom;el.style.zoom='';el.classList.add('pdfmode');const name=pdfName(d);
   let blob;try{blob=await html2pdf().set({margin:[8,0,8,0],filename:name,image:{type:'jpeg',quality:0.92},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
-    jsPDF:{unit:'mm',format:'a4',orientation:isLand(d)?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.nentry','.sign','table.kv','.box','.pic','.lh','.title','.two']}}).from(el).outputPdf('blob')}
+    jsPDF:{unit:'mm',format:'a4',orientation:isLand(d)?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.jpb','.nentry','.sign','table.kv','.box','.pic','.lh','.title','.two']}}).from(el).outputPdf('blob')}
   finally{el.classList.remove('pdfmode');el.style.zoom=z;fitDoc()}
   deliverPDF(blob,name)}
  catch(e){showErr('整唔到 PDF',e)}finally{pdfBusy=false;if(btn){btn.disabled=false;btn.textContent='⬇ 存 PDF'}}}
@@ -1371,6 +1387,33 @@ function crMonthPick(m){const q=document.querySelector('main .bar input');if(q){
 function crCSV(){const rows=[['記錄號','寄出日期','寄件地點','快遞公司','運單號','收件公司','收件人','國家','內容','件數','重量kg','狀態','簽收日期','相關樣板單','運費貨幣','運費']];
  docsOf('CR').forEach(d=>rows.push([d.no,d.date,crSender(d).name||'',d.courier,d.awb,d.recv?.company,d.recv?.attn,d.recv?.country,d.contents,d.pkgs,d.weight,d.status,d.delivered,(d.sdIds||[]).map(id=>docById(id)?.no||'').join(' '),num(d.freight)?(d.freightCur||'HKD'):'',d.freight??'']));
  download(`寄快遞紀錄-${today()}.csv`,'﻿'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n'),'text/csv')}
+
+// 日本格式報價單（F.O. 客戶要求嘅格式）
+const JP_FEE=['含む','含まず',''];
+function custQtFmt(cu){cu=cu||{};return cu.qtFmt||(/F\.?\s*O\.?\s*INTERNATIONAL/i.test(cu.name||'')?'jp':'std')}
+function jpCount(str){return String(str||'').split(/[,，、\/]+/).map(x=>x.trim()).filter(Boolean).length}
+function jpDefaults(l){const s=findStyle(l.devNo);const j=l.jp||(l.jp={});
+ const d={name:s.name||'',size:s.sizeRange?(/[a-z]/i.test(s.sizeRange)?s.sizeRange:s.sizeRange+'cm'):'',qty:'',fku:jpCount(l.colors)||'',sizes:styleSizes(s).length||'',pack:'PP袋',inspFee:'含む',inspPlace:'',checkFee:'含まず'};
+ for(const k in d)if(j[k]===undefined)j[k]=d[k];return j}
+function jpEditor(P){if(D.fmt!=='jp')return '';
+ const cols=[['name','商品',150],['size','サイズ (表示)',90],['qty','数量',70],['fku','FKU',50],['sizes','サイズ展開',60],['pack','梱包',80],['inspFee','検品費用',0],['inspPlace','検品所',100],['checkFee','検査費用',0]];
+ return `<div class="card"><h3>🇯🇵 日本格式資料（見積書）</h3><p class="muted">每款一格，印出嚟同 F.O. 要求嘅格式一樣。「※1色○足～」用上面嘅 MOQ；FOB 用上面嘅報價；備考用上面嘅備註。FKU 預設 = 顏色數目，サイズ展開預設 = 碼數數目，可以自己改。</p><div class="scroll"><table class="grid"><tr><th>款號</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>
+ ${D.lines.map((l,i)=>{if(!l.devNo)return '';jpDefaults(l);const q=`${P}.lines.${i}.jp.`;return `<tr><td class="c">${esc(l.devNo)}</td>${cols.map(([k,,w])=>`<td>${w?inp(q+k,{w,n:['qty','fku','sizes'].includes(k)}):sel(q+k,JP_FEE.map(x=>[x,x||'—']))}</td>`).join('')}</tr>`}).join('')}</table></div></div>`}
+function jpPrint(d,cp){const c=S.company,cu=findCust(d.cust),cur=curOf(d);
+ const blk=(l)=>{const j=jpDefaults(l);const s=findStyle(l.devNo);const img=imgOf(l.devNo);
+  return `<div class="jpb"><div class="jpno">品番 ${esc(l.devNo)}${s.custStyle?' / '+esc(s.custStyle):''}</div><table class="jpt">
+  <tr><td colspan="3" class="jpimg">${img?`<img src="${img}">`:''}</td><td class="c jpsz">${esc(j.size)}</td></tr>
+  <tr><td class="jl">商品</td><td colspan="3" class="c">${esc(j.name)}</td></tr>
+  <tr><td class="jl">数量</td><td class="r">${esc(j.qty)}</td><td colspan="2">${l.moq!==''&&l.moq!=null?'※1色'+esc(l.moq)+'足～':''}</td></tr>
+  <tr><td class="jl">FOB</td><td colspan="3" class="c">${cp&&l.price!==''&&l.price!=null?esc(cur)+' '+f2(l.price):''}</td></tr>
+  <tr><td class="jl">FKU</td><td class="r">${esc(j.fku)}</td><td class="jl">検品費用</td><td>${esc(j.inspFee)}</td></tr>
+  <tr><td class="jl">サイズ展開</td><td class="r">${esc(j.sizes)}</td><td class="jl">検品所</td><td>${esc(j.inspPlace)}</td></tr>
+  <tr><td class="jl">梱包</td><td>${esc(j.pack)}</td><td class="jl">検査費用</td><td>${esc(j.checkFee)}</td></tr>
+  <tr><td class="jl jrem">備考</td><td colspan="3" class="jrem">${esc(l.rem||'').replace(/\n/g,'<br>')}</td></tr></table></div>`};
+ return `<div class="title">御見積書 QUOTATION</div><div class="two"><div><b style="font-size:13px">${esc(cu.name||'')} 御中</b>${cu.attn?'<br>'+esc(cu.attn)+' 様':''}</div><div>${kv([['見積番号:',d.no],['日付:',d.date],['有効期限:',d.valid],['通貨:',cur],['条件:',priceTerm(d)]])}</div></div>
+ ${(()=>{const ls=d.lines.filter(l=>l.devNo),g=[];for(let i=0;i<ls.length;i+=6)g.push(ls.slice(i,i+6));return g.map((x,k)=>`<div class="jpgrid${k?' jppg':''}">${x.map(blk).join('')}</div>`).join('')})()}
+ ${d.remarks||d.leadTime?`<div class="sec">備考 Remarks</div>${kv([['納期 Lead Time:',d.leadTime],['Remarks:',d.remarks]],1)}`:''}
+ ${sign(['',''],[ours(),esc(c.contact)])}`}
 
 boot();
 </script>
